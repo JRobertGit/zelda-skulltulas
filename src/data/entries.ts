@@ -1,77 +1,306 @@
 // SPOILERS: every location in the app lives here.
-// Each entry is checked against at least two guides where possible. Any
-// disagreement is recorded in `disputed` and shown in the app.
-import type { Entry } from '../types';
+//
+// Written from the full text of the RPG Site and Respec guides, which share an
+// author and numbering, and compared against Game8's separate Gold Skulltula
+// list. `disputed` records a real disagreement between them. Nothing here has
+// been checked in the game itself, so the app lets the player mark entries wrong.
+import type { Age, Entry, Kind, SourceId } from '../types';
 
-const G8_RPG = ['game8', 'rpgsite'] as const;
-const RPG_RESPEC = ['rpgsite', 'respec'] as const;
+const AUTHOR: SourceId[] = ['rpgsite', 'respec'];
+const BOTH: SourceId[] = ['rpgsite', 'respec', 'game8'];
+
+interface Options {
+  night?: boolean;
+  age?: Age;
+  minTokens?: number;
+  grants?: string;
+  disputed?: string;
+  sources?: SourceId[];
+}
+
+const make = (kind: Kind, id: string, area: string, name: string, where: string, needs: string[], o: Options = {}): Entry => ({
+  id, area, kind, name, where, needs, sources: o.sources ?? AUTHOR, ...o,
+});
+
+const NIGHT_DISPUTE = 'Guides disagree on whether this appears only at night.';
+const gs = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
+  make('skulltula', id, area, 'Gold Skulltula', where, needs, { sources: BOTH, ...o });
+const hp = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
+  make('heart', id, area, 'Piece of Heart', where, needs, o);
+const up = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('upgrade', id, area, name, where, needs, o);
+const song = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('song', id, area, name, where, needs, o);
+const fairy = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('fairy', id, area, name, where, needs, o);
+const mask = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('mask', id, area, name, where, needs, { age: 'child', ...o });
+const bottle = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
+  make('bottle', id, area, 'Empty Bottle', where, needs, { grants: 'bottle', ...o });
+const item = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('reward', id, area, name, where, needs, o);
+
+const child: Options = { age: 'child' };
+const adult: Options = { age: 'adult' };
+const adultNight: Options = { age: 'adult', night: true };
+const childNight: Options = { age: 'child', night: true };
 
 export const ENTRIES: Entry[] = [
   // Deku Tree
-  { id: 'gs-deku-switch', area: 'deku', kind: 'skulltula', name: 'Gold Skulltula', where: 'Upper floor, optional alcove reached after the switch and raised platforms', needs: [], sources: [...G8_RPG] },
-  { id: 'gs-deku-gate', area: 'deku', kind: 'skulltula', name: 'Gold Skulltula', where: 'Basement, behind the north gate', needs: ['slingshot'], sources: [...G8_RPG] },
-  { id: 'gs-deku-web', area: 'deku', kind: 'skulltula', name: 'Gold Skulltula', where: 'Basement, vines in the room behind the burnable webs', needs: ['slingshot'], sources: [...G8_RPG] },
-  { id: 'gs-deku-vines', area: 'deku', kind: 'skulltula', name: 'Gold Skulltula', where: 'Basement, look back at the vines near where you drop in', needs: ['slingshot'], sources: [...G8_RPG] },
+  gs('gs-deku-switch', 'deku', 'Compass room: press the switch and go left, into the alcove', [], child),
+  gs('gs-deku-gate', 'deku', 'Lower level, on the grate in the water at the north side', ['slingshot'], child),
+  gs('gs-deku-vines', 'deku', 'Lower level: after climbing out of the water, turn around and look at the vines', ['slingshot'], child),
+  gs('gs-deku-web', 'deku', 'Past the torch room: burn the north-west web with a Deku Stick', ['slingshot'], child),
 
   // Kokiri Forest
-  { id: 'gs-kokiri-house', area: 'kokiri', kind: 'skulltula', name: 'Gold Skulltula', where: "Back wall of the Know-It-All Brothers' house", needs: ['dekuClear'], night: true, disputed: 'Guides describe this house differently: one says west, another south-east.', sources: [...G8_RPG] },
-  { id: 'gs-kokiri-soil', area: 'kokiri', kind: 'skulltula', name: 'Gold Skulltula', where: 'Soft soil behind the shop: release a bottled bug', needs: ['dekuClear', 'bottle'], sources: [...G8_RPG] },
+  gs('gs-kokiri-house', 'kokiri', "Behind the Know-It-All Brothers' house, south-west", ['dekuClear'], childNight),
+  gs('gs-kokiri-soil', 'kokiri', 'Soft soil behind the shop: release a bottled bug', ['dekuClear', 'bottle'], child),
+  gs('gs-kokiri-roof', 'kokiri', 'Behind the south-east house: use the Hookshot', ['hookshot'], adultNight),
+  item('item-cow', 'kokiri', 'Lon Lon Cow', "Appears at your house after Malon's obstacle course. Optional: free milk", ['epona'], adult),
 
   // Lost Woods
-  { id: 'gs-woods-soil-a', area: 'lostwoods', kind: 'skulltula', name: 'Gold Skulltula', where: 'Soft soil after going left twice: release a bottled bug', needs: ['dekuClear', 'bottle'], sources: [...G8_RPG] },
-  { id: 'gs-woods-soil-b', area: 'lostwoods', kind: 'skulltula', name: 'Gold Skulltula', where: 'Soft soil on the Forest Stage route, behind the Business Scrub: release a bottled bug', needs: ['dekuClear', 'bottle'], sources: [...G8_RPG] },
-  { id: 'hp-woods-mimic', area: 'lostwoods', kind: 'heart', name: 'Piece of Heart', where: 'Copy the song of the two Skull Kids on the stumps', needs: ['ocarina'], sources: [...RPG_RESPEC] },
-  { id: 'hp-woods-saria', area: 'lostwoods', kind: 'heart', name: 'Piece of Heart', where: "Lone Skull Kid, first left from Kokiri Forest: play Saria's Song", needs: ['saria'], sources: [...RPG_RESPEC] },
-  { id: 'up-woods-seeds', area: 'lostwoods', kind: 'upgrade', name: 'Biggest Deku Seed Bag', where: 'Hit the Lost Woods target three times in a row', needs: ['slingshot'], sources: ['rpgsite'] },
-  { id: 'up-woods-sticks', area: 'lostwoods', kind: 'upgrade', name: 'Bigger Deku Stick Bag', where: 'Business Scrub at the end of the path: beat it, then pay 40 Rupees', needs: ['dekuClear'], sources: ['rpgsite'] },
-  { id: 'up-woods-nuts', area: 'lostwoods', kind: 'upgrade', name: 'Bigger Deku Nut Bag', where: 'Bomb the boulder near the meadow, then pay the grotto Business Scrub 40 Rupees', needs: ['bombs'], sources: ['rpgsite'] },
+  gs('gs-woods-soil-a', 'lostwoods', 'From the Kokiri entrance go left, then out the far side: soft soil. Release a bug', ['dekuClear', 'bottle'], child),
+  gs('gs-woods-soil-b', 'lostwoods', 'Forest Stage (right, left, right, left, left): soft soil. Release a bug', ['dekuClear', 'bottle'], child),
+  gs('gs-woods-bean', 'lostwoods', 'Past Mido, go left: ride the bean plant you planted as a child', ['beans'], adultNight),
+  hp('hp-woods-mimic', 'lostwoods', 'Below the target: stand on the stump and copy the two Skull Kids until they pay up', ['ocarina'], child),
+  hp('hp-woods-saria', 'lostwoods', "Lone Skull Kid, first left from Kokiri: play Saria's Song", ['saria'], child),
+  up('up-woods-seeds', 'lostwoods', 'Biggest Deku Seed Bag', 'Right from the Kokiri entrance: hit the target three times', ['slingshot'], child),
+  up('up-woods-sticks', 'lostwoods', 'Bigger Deku Stick Bag', 'End of the path past the first-left Skull Kid: beat the Business Scrub, then pay 40 Rupees', ['dekuClear'], child),
+  up('up-woods-nuts', 'lostwoods', 'Bigger Deku Nut Bag', 'Last screen before the meadow: bomb the boulder, pay the grotto Business Scrub 40 Rupees', ['bombs'], child),
+  up('up-woods-sticks2', 'lostwoods', 'Biggest Deku Stick Bag', 'Forest Stage grotto: wear the Skull Mask on stage', ['maskSkull'], child),
+  up('up-woods-nuts2', 'lostwoods', 'Biggest Deku Nut Bag', 'Forest Stage grotto: wear the Mask of Truth on stage', ['maskTruth'], child),
+
+  // Forest Meadow
+  song('song-saria', 'meadow', "Saria's Song", 'Follow the music to the top of the meadow and talk to Saria', ['lullaby'], { ...child, grants: 'saria' }),
+  gs('gs-meadow', 'meadow', 'Halfway through the maze, up on the right-hand wall', ['hookshot'], { ...adultNight, disputed: 'One guide places this near the temple stairs instead of mid-maze.' }),
+  song('song-minuet', 'meadow', 'Minuet of Forest', 'Cutscene when you reach the meadow as an adult', ['hookshot'], adult),
 
   // Hyrule Field
-  { id: 'gs-field-tree', area: 'field', kind: 'skulltula', name: 'Gold Skulltula', where: 'Roll into the lone tree at the end of the stream, south-east part of the field', needs: ['dekuClear'], disputed: 'One guide says night only, another lists it as any time.', sources: [...G8_RPG] },
-  { id: 'gs-field-grotto', area: 'field', kind: 'skulltula', name: 'Gold Skulltula', where: 'South-west of the field, near the ranch: bomb the floor crack, then use the Boomerang in the grotto', needs: ['bombs', 'boomerang'], sources: [...G8_RPG] },
-  { id: 'gs-field-crate', area: 'field', kind: 'skulltula', name: 'Gold Skulltula', where: 'Hidden grotto in the western marsh area: smash the crate', needs: ['boomerang', 'dins'], sources: [...G8_RPG] },
+  gs('gs-field-tree', 'field', 'Near the Kokiri Forest road: roll into the lone tree at the end of the stream', ['dekuClear'], { ...childNight, disputed: NIGHT_DISPUTE }),
+  gs('gs-field-grotto', 'field', 'South woods, behind the ranch: bomb the crack, then use the Boomerang in the grotto', ['bombs', 'boomerang'], child),
+  gs('gs-field-crate', 'field', 'Hidden grotto in the western marshland: smash the crate', ['boomerang', 'dins'], child),
+  hp('hp-field-chest', 'field', 'Red-rock outcrop near the Gerudo side. As an adult read the Fairy Note, then open the chest as a child', ['adult', 'forestClear'], child),
+  hp('hp-field-shop', 'field', 'Grotto by the single tree beside the castle-side moat. Read the note as an adult, give the password as a child, pay 100 Rupees', ['adult', 'forestClear', 'bombs'], child),
+  item('quest-poes', 'field', 'Big Poes (all ten)', 'Jump Epona over the glowing purple lanterns, shoot them, bottle them, sell at the Market Poe Shop', ['epona', 'bow', 'bottle'], adult),
 
   // Market
-  { id: 'gs-market-crate', area: 'market', kind: 'skulltula', name: 'Gold Skulltula', where: 'Room full of pots, door on the right as you enter: smash the crate that twitches', needs: ['dekuClear'], sources: [...G8_RPG] },
-  { id: 'bottle-market', area: 'market', kind: 'bottle', name: 'Empty Bottle', where: "Potion Shop: help the shopkeeper with the bug problem", needs: ['dekuClear'], grants: 'bottle', sources: ['rpgsite', 'respec', 'game8'] },
-  { id: 'up-market-seeds', area: 'market', kind: 'upgrade', name: 'Bigger Deku Seed Bag', where: 'Shooting Gallery: get a perfect score', needs: ['slingshot', 'dekuClear'], sources: ['rpgsite'] },
-  { id: 'hp-market-bowling', area: 'market', kind: 'heart', name: 'Piece of Heart', where: 'Bombchu Bowling Alley prize', needs: ['bombs'], sources: [...RPG_RESPEC] },
-  { id: 'up-market-bombs', area: 'market', kind: 'upgrade', name: 'Biggest Bomb Bag', where: 'Bombchu Bowling Alley prize', needs: ['bombs'], sources: ['rpgsite'] },
-  { id: 'hp-market-dog', area: 'market', kind: 'heart', name: 'Piece of Heart', where: 'Bring the right white dog, Richard, to its owner. It usually starts in the back alley', needs: ['dekuClear'], night: true, sources: [...RPG_RESPEC] },
+  gs('gs-market-crate', 'market', 'First door on the right as you enter, the room of pots: roll into the crate that twitches', ['dekuClear'], child),
+  bottle('bottle-poe', 'market', 'Poe Shop: reach 500 points by selling Big Poes', ['epona', 'bow', 'bottle'], adult),
+  bottle('bottle-market', 'market', 'Potion Shop: agree to catch the bug for the shopkeeper', ['dekuClear'], { ...child, sources: BOTH }),
+  up('up-market-seeds', 'market', 'Bigger Deku Seed Bag', 'Rupee Shooting Gallery: perfect 10/10', ['slingshot', 'dekuClear'], child),
+  hp('hp-market-bowling', 'market', 'Bombchu Bowling prize. Play until you have all its prizes', ['bombs'], child),
+  up('up-market-bombs', 'market', 'Biggest Bomb Bag', 'Bombchu Bowling prize', ['bombs'], child),
+  item('item-bombchus', 'market', 'Bombchus', 'Bombchu Bowling prize', ['bombs'], child),
+  hp('hp-market-dog', 'market', "Bring Richard to the dog lady. Of three white dogs, he usually starts in the alley near her house", ['dekuClear'], childNight),
+  hp('hp-market-chest', 'market', 'Treasure Chest game in the back alley: the Lenses of Truth show what\'s inside', ['lens', 'forestClear'], childNight),
+  mask('mask-keaton', 'market', 'Keaton Mask', 'Borrow at the Happy Mask Shop, then sell to the guard at the Death Mountain gate in Kakariko', ['bombs']),
+  mask('mask-skull', 'market', 'Skull Mask', 'Borrow next, wear it at the Forest Stage grotto, then sell to the lone Skull Kid in the Lost Woods', ['bombs'], { grants: 'maskSkull' }),
+  mask('mask-spooky', 'market', 'Spooky Mask', 'Borrow next, sell to the kid in the Graveyard during the day', ['bombs']),
+  mask('mask-bunny', 'market', 'Bunny Hood', 'Borrow next, sell to the running man in Hyrule Field. He often passes the Market gate early in the day', ['bombs']),
+  mask('mask-others', 'market', 'Zora, Goron and Gerudo Masks', 'Unlocked once the Bunny Hood is paid off', ['bombs']),
+  mask('mask-truth', 'market', 'Mask of Truth', 'Given by the shop owner once the sales are done', ['bombs'], { grants: 'maskTruth' }),
 
   // Hyrule Castle
-  { id: 'gs-castle-tree', area: 'castle', kind: 'skulltula', name: 'Gold Skulltula', where: 'Roll into the tree in front of the west building, before the moat', needs: ['dekuClear'], disputed: 'One guide says night only, another lists it as any time.', sources: [...G8_RPG] },
-  { id: 'fairy-castle', area: 'castle', kind: 'fairy', name: 'Great Fairy: Spin Attack upgrade', where: 'Sneak past the main gate, bomb the cracked wall, then play Zelda\'s Lullaby', needs: ['bombs', 'lullaby'], sources: ['rpgsite'] },
+  gs('gs-castle-tree', 'castle', 'Before climbing the vine to the castle, look right behind the wall: roll into the tree', ['dekuClear'], { ...childNight, disputed: 'Guides differ on the exact tree and on whether it needs night.' }),
+  gs('gs-castle-grotto', 'castle', "Where you found Talon asleep: tree in the corner facing the town. Play the Song of Storms to open the grotto", ['storms', 'forestClear'], child),
+  fairy('fairy-castle', 'castle', 'Spin Attack', "Just past the gate: bomb the cracked wall, play Zelda's Lullaby, pay 50 Rupees", ['bombs', 'lullaby'], child),
+  song('song-lullaby', 'castle', "Zelda's Lullaby", 'After the scenes in the castle courtyard', ['ocarina'], { ...child, grants: 'lullaby' }),
+
+  // Temple of Time
+  song('song-time', 'market', 'Song of Time', 'Scene at the Market gate once you have the three stones, then collect from the moat', ['boomerang'], { ...child, grants: 'songTime' }),
+  song('song-prelude', 'temple', 'Prelude of Light', 'Talk to Sheik after the Forest Temple', ['forestClear'], adult),
+
+  // Ganon's Castle (outside and in)
+  gs('gs-ganon', 'ganon', 'Outside, keep east: on the back of the collapsed building. Don\'t go in yet', ['lightArrows'], adult),
+  fairy('fairy-ganon', 'ganon', 'Gift of Halved Damage', "Leave the castle, lift the golden rock left of the bridge, play Zelda's Lullaby, pay 500 Rupees", ['goldenGauntlets'], adult),
 
   // Lon Lon Ranch
-  { id: 'gs-ranch-tree', area: 'lonlon', kind: 'skulltula', name: 'Gold Skulltula', where: 'Roll into the tree behind the house with the Cucco game', needs: ['dekuClear'], sources: [...G8_RPG] },
-  { id: 'gs-ranch-house', area: 'lonlon', kind: 'skulltula', name: 'Gold Skulltula', where: 'Boomerang it off the house wall by the window', needs: ['boomerang'], night: true, sources: [...G8_RPG] },
-  { id: 'gs-ranch-tower', area: 'lonlon', kind: 'skulltula', name: 'Gold Skulltula', where: 'Boomerang it inside the tall ruined tower, far south-west', needs: ['boomerang'], disputed: 'One guide says night only, another lists it as any time.', sources: [...G8_RPG] },
-  { id: 'hp-ranch-silo', area: 'lonlon', kind: 'heart', name: 'Piece of Heart', where: 'Crumbling tower, south-west edge: solve the block puzzle and crawl through', needs: ['dekuClear'], sources: [...RPG_RESPEC] },
-  { id: 'bottle-ranch', area: 'lonlon', kind: 'bottle', name: 'Empty Bottle', where: 'Win the Super Cucco game', needs: ['dekuClear'], grants: 'bottle', sources: ['rpgsite'] },
-  { id: 'song-epona', area: 'lonlon', kind: 'song', name: "Epona's Song", where: 'Show Malon your Ocarina in the horse paddock', needs: ['ocarina'], sources: ['rpgsite'] },
+  gs('gs-ranch-tree', 'lonlon', 'Behind the Cucco Search building: roll into the two trees', ['dekuClear'], child),
+  gs('gs-ranch-house', 'lonlon', 'On the ranch house window: use the Boomerang', ['boomerang'], childNight),
+  gs('gs-ranch-tower', 'lonlon', 'Inside the south-west silo building: use the Boomerang', ['boomerang'], { ...child, disputed: NIGHT_DISPUTE }),
+  hp('hp-ranch-silo', 'lonlon', 'South-west silo building: move the blocks and crawl through the gap', ['dekuClear'], child),
+  bottle('bottle-ranch', 'lonlon', 'Win the Super Cucco game, first door on the left as you enter', ['dekuClear'], child),
+  song('song-epona', 'lonlon', "Epona's Song", 'Take out your Ocarina in front of Malon in the paddock', ['ocarina'], child),
+  item('item-epona', 'lonlon', 'Epona', "Pay to ride, play Epona's Song, then beat Ingo in the races and jump the fence", ['adult'], { ...adult, grants: 'epona' }),
 
   // Kakariko
-  { id: 'gs-kak-ladder', area: 'kakariko', kind: 'skulltula', name: 'Gold Skulltula', where: 'Ladder of the watchtower, near the top', needs: ['dekuClear', 'slingshot'], night: true, sources: [...G8_RPG] },
-  { id: 'gs-kak-nw', area: 'kakariko', kind: 'skulltula', name: 'Gold Skulltula', where: 'Wall of the north-west house, before the Death Mountain gate', needs: ['dekuClear'], night: true, sources: [...G8_RPG] },
-  { id: 'gs-kak-door', area: 'kakariko', kind: 'skulltula', name: 'Gold Skulltula', where: 'Beside the door of the House of Skulltula', needs: ['dekuClear'], night: true, sources: ['game8', 'rpgsite', 'respec'] },
-  { id: 'gs-kak-site', area: 'kakariko', kind: 'skulltula', name: 'Gold Skulltula', where: 'Bricks in the building site, middle of the village', needs: ['dekuClear'], night: true, sources: [...G8_RPG] },
-  { id: 'gs-kak-tree', area: 'kakariko', kind: 'skulltula', name: 'Gold Skulltula', where: 'Roll into the lone tree near the village entrance', needs: ['dekuClear'], disputed: 'One guide says night only, another lists it as any time.', sources: [...G8_RPG] },
-  { id: 'hp-kak-roof', area: 'kakariko', kind: 'heart', name: 'Piece of Heart', where: 'Glide with a Cucco from behind the Windmill to the blue roof, then talk to the person there', needs: ['dekuClear'], sources: [...RPG_RESPEC] },
-  { id: 'hp-kak-owl', area: 'kakariko', kind: 'heart', name: 'Piece of Heart', where: 'Rooftop near where the owl drops you after its ride from the mountain peak', needs: ['bombs'], sources: [...RPG_RESPEC] },
-  { id: 'bottle-kak', area: 'kakariko', kind: 'bottle', name: 'Empty Bottle', where: "Return all the Cucco Lady's chicks", needs: ['dekuClear'], grants: 'bottle', sources: ['rpgsite'] },
-  { id: 'reward-10', area: 'kakariko', kind: 'reward', name: '10 token reward', where: 'House of Skulltula', needs: [], minTokens: 10, sources: [...RPG_RESPEC] },
-  { id: 'reward-20', area: 'kakariko', kind: 'reward', name: '20 token reward', where: 'House of Skulltula', needs: [], minTokens: 20, disputed: 'Guides disagree on what this reward is, and one lists it at 22 tokens.', sources: [...RPG_RESPEC] },
-  { id: 'reward-30', area: 'kakariko', kind: 'reward', name: '30 token reward', where: 'House of Skulltula', needs: [], minTokens: 30, disputed: 'Reward details are not confirmed.', sources: ['rpgsite'] },
-  { id: 'reward-40', area: 'kakariko', kind: 'reward', name: '40 token reward', where: 'House of Skulltula', needs: [], minTokens: 40, disputed: 'Reward details are not confirmed.', sources: ['game8'] },
-  { id: 'hp-kak-50', area: 'kakariko', kind: 'heart', name: 'Piece of Heart', where: 'House of Skulltula, 50 token reward', needs: [], minTokens: 50, sources: [...RPG_RESPEC] },
-  { id: 'reward-100', area: 'kakariko', kind: 'reward', name: '100 token reward', where: 'House of Skulltula', needs: [], minTokens: 100, sources: ['rpgsite'] },
+  gs('gs-kak-ladder', 'kakariko', 'Ladder of the watchtower: shoot it with the Slingshot, then climb for the token', ['dekuClear', 'slingshot'], childNight),
+  gs('gs-kak-nw', 'kakariko', 'Behind the north-western house', ['dekuClear'], childNight),
+  gs('gs-kak-door', 'kakariko', 'Beside the door of the House of Skulltula', ['dekuClear'], childNight),
+  gs('gs-kak-site', 'kakariko', 'Building site: climb the scaffold', ['dekuClear'], childNight),
+  gs('gs-kak-tree', 'kakariko', 'Roll into the tree in the village', ['dekuClear'], { ...childNight, disputed: 'Guides differ: middle of town at night, or near the entrance at any time.' }),
+  gs('gs-kak-roof', 'kakariko', 'Southernmost house: Hookshot the vines to its roof and look behind it', ['hookshot'], adultNight),
+  hp('hp-kak-roof', 'kakariko', 'Use a Cucco to clear the fence at the Windmill, climb the ladder, then glide to the blue roof and talk to the man', ['dekuClear'], child),
+  hp('hp-kak-owl', 'kakariko', 'Ride the owl from the mountain peak, then drop south onto the next roof', ['bombs'], child),
+  hp('hp-kak-windmill', 'kakariko', "Dampe's race drops you in the Windmill: jump to the upper ledge", ['hookshot'], adult),
+  bottle('bottle-kak', 'kakariko', "Return all seven of the Cucco Lady's Cuccos", ['dekuClear'], child),
+  song('song-storms', 'kakariko', 'Song of Storms', 'Take out your Ocarina in front of the Windmill music man', ['hookshot'], { ...adult, grants: 'storms' }),
+  song('song-nocturne', 'kakariko', 'Nocturne of Shadow', 'Story scenes on your next visit after the Water Temple', ['longshot'], adult),
+  up('up-quiver', 'kakariko', 'Bigger Quiver', 'Win the target shooting game', ['bow'], adult),
+  item('reward-10', 'kakariko', "Adult's Wallet", 'House of Skulltula, 10 tokens', [], { minTokens: 10, disputed: 'Guides disagree on its capacity: 200 or 500 Rupees.' }),
+  item('reward-20', 'kakariko', 'Echo Gem', 'House of Skulltula, 20 tokens. Equip it: it reacts near Gold Skulltulas', [], { minTokens: 20, sources: BOTH }),
+  item('reward-30', 'kakariko', "Giant's Wallet", 'House of Skulltula, 30 tokens', [], { minTokens: 30, sources: BOTH }),
+  item('reward-40', 'kakariko', '20 Bombchus', 'House of Skulltula, 40 tokens', [], { minTokens: 40, sources: ['respec', 'game8'] }),
+  hp('hp-kak-50', 'kakariko', 'House of Skulltula, 50 tokens', [], { minTokens: 50, sources: BOTH }),
+  item('reward-100', 'kakariko', 'Endless 200 Rupees', 'House of Skulltula, 100 tokens', [], { minTokens: 100, sources: BOTH }),
+  item('quest-biggoron', 'kakariko', 'Biggoron Sword trading quest', 'Pocket Egg from the Cucco Lady starts it. Timed legs ahead: see the warning below', ['hookshot', 'longshot'], adult),
 
   // Graveyard
-  { id: 'gs-grave-soil', area: 'graveyard', kind: 'skulltula', name: 'Gold Skulltula', where: 'Soft soil on the north side: release a bottled bug', needs: ['dekuClear', 'bottle'], sources: [...G8_RPG] },
-  { id: 'gs-grave-wall', area: 'graveyard', kind: 'skulltula', name: 'Gold Skulltula', where: "Boomerang it off the wall behind Dampe's hut", needs: ['boomerang'], disputed: 'One guide says night only, another lists it as any time.', sources: [...G8_RPG] },
-  { id: 'hp-grave-dig', area: 'graveyard', kind: 'heart', name: 'Piece of Heart', where: "Top prize on Dampe's Gravedigging Tour: keep paying when he says it's something hard", needs: ['dekuClear'], night: true, sources: [...RPG_RESPEC] },
-  { id: 'hp-grave-pull', area: 'graveyard', kind: 'heart', name: 'Piece of Heart', where: 'Pull back the rear-right grave, not the giant tomb, and go underneath', needs: ['dekuClear'], night: true, sources: [...RPG_RESPEC] },
-  { id: 'shield-grave', area: 'graveyard', kind: 'shield', name: 'Hylian Shield', where: 'Free inside one of the graves you can pull open', needs: ['dekuClear'], night: true, sources: ['rpgsite'] },
-  { id: 'song-sun', area: 'graveyard', kind: 'song', name: "Sun's Song", where: "Top of the graveyard: play Zelda's Lullaby at the plinth to open the crypt", needs: ['lullaby'], sources: ['rpgsite'] },
+  gs('gs-grave-soil', 'graveyard', 'Soft soil in the north-west: release a bottled bug', ['dekuClear', 'bottle'], child),
+  gs('gs-grave-wall', 'graveyard', "Behind Dampe's hut: use the Boomerang", ['boomerang'], { ...childNight, disputed: NIGHT_DISPUTE }),
+  hp('hp-grave-dig', 'graveyard', "Dampe's Gravedigging Tour: random. Pay extra when he says it's something hard", ['dekuClear'], childNight),
+  hp('hp-grave-pull', 'graveyard', 'Pull open the right-most normal grave facing the big tomb, then drop in', ['dekuClear'], childNight),
+  hp('hp-grave-bean', 'graveyard', 'Ride the bean plant you planted as a child, in the north', ['beans'], adult),
+  hp('hp-grave-race', 'graveyard', "Beat Dampe's race in under a minute", ['hookshot'], adult),
+  make('shield', 'shield-grave', 'graveyard', 'Hylian Shield', 'Second grave on the right of the path to the big tomb: pull it, defeat what\'s inside, open the chest', ['dekuClear'], childNight),
+  song('song-sun', 'graveyard', "Sun's Song", "Top of the graveyard: play Zelda's Lullaby on the symbol, then go through the tomb", ['lullaby'], { ...child, grants: 'sun' }),
+
+  // Well
+  gs('gs-well-a', 'well', 'With the Lenses, past the Beamos room: beat the Like Like, then the wall', ['lens', 'boomerang'], child),
+  gs('gs-well-b', 'well', 'West locked door off the central room', ['lens'], child),
+  gs('gs-well-c', 'well', 'East locked door: the Lenses show the path', ['lens'], child),
+
+  // Death Mountain Trail
+  gs('gs-trail-soil', 'trail', 'Soft soil at the Dodongo Cavern entrance: release a bottled bug', ['bracelet', 'bottle'], child),
+  gs('gs-trail-wall', 'trail', 'Bombable wall on the road back to Kakariko', ['bombs']),
+  gs('gs-trail-rock-a', 'trail', 'Where rocks fell on you earlier: smash the rocks on the path with the Hammer', ['hammer'], adult),
+  gs('gs-trail-rock-b', 'trail', 'Rock near the Goron City entrance: smash it with the Hammer', ['hammer'], adult),
+  fairy('fairy-dins', 'trail', "Din's Fire", "Mountain peak, left of the owl: bomb the cave, play Zelda's Lullaby, pay up", ['bombs', 'lullaby'], { ...child, grants: 'dins' }),
+  hp('hp-trail-bean', 'trail', 'Ride the bean plant you planted outside Dodongo Cavern as a child', ['beans'], adult),
+
+  // Dodongo Cavern
+  gs('gs-dodongo-stairs', 'dodongo', 'Bomb flower staircase: look up behind the stairs as you loop around', ['bracelet']),
+  gs('gs-dodongo-rock', 'dodongo', 'From the main-room shortcut, turn right and bomb the rock', ['bombs']),
+  gs('gs-dodongo-corridor', 'dodongo', '1F east, the Baby Dodongo corridor: bomb the alcove on the south side', ['bombs']),
+  gs('gs-dodongo-mouth', 'dodongo', 'Through the skull\'s mouth, in the block room: bomb the cracked wall', ['bombs']),
+  gs('gs-dodongo-pierre', 'dodongo', "Baby Dodongo corridor: play the Scarecrow's Song and Hookshot up", ['scarecrow', 'hookshot'], adult),
+
+  // Goron City
+  gs('gs-goron-crate', 'goron', 'Top tier: bomb into the west room, then through its maze to a crate', ['bombs'], child),
+  gs('gs-goron-rock', 'goron', 'Behind the central rock the bridges connect to: Hookshot it from the grate below', ['hookshot'], adult),
+  hp('hp-goron-pot', 'goron', 'Light the four torches, then throw a bomb into the spinning pot from above', ['bombs'], child),
+  up('up-goron-bombs', 'goron', 'Bigger Bomb Bag', 'Stop the rolling Goron with a bomb in front of the sign, middle floor', ['bombs'], child),
+  item('item-goron-tunic', 'goron', 'Goron Tunic', 'Stop the rolling Goron child with a bomb', ['hookshot', 'bombs'], adult),
+  item('item-knife', 'goron', "Giant's Knife", 'Medigoron, right of the entrance: 200 Rupees. It breaks if you use it, and that is fine', ['hookshot'], adult),
+
+  // The Crater
+  gs('gs-crater-crate', 'crater', 'From the peak, duck in and go left: smash the two crates, then get out', ['bombs'], child),
+  gs('gs-crater-soil', 'crater', 'Warp in with Bolero as a child: soft soil next to the warp. Release a bug, plant a bean', ['bolero', 'forestClear', 'bottle'], child),
+  hp('hp-crater-grates', 'crater', 'After the Fire Temple: climb down between the two grates in the south', ['hammer'], adult),
+  hp('hp-crater-bean', 'crater', 'Ride the bean plant by the warp point', ['bolero', 'forestClear', 'beans'], adult),
+  hp('hp-crater-scrub', 'crater', 'As a child from the peak: go left and down to the Business Scrub. 100 Rupees. Heal first, the heat is a timer', ['bombs'], child),
+  song('song-bolero', 'crater', 'Bolero of Fire', 'Hookshot across the broken bridge on your first adult visit', ['hookshot'], { ...adult, grants: 'bolero' }),
+  fairy('fairy-double', 'crater', 'Double Magic', "West side: smash the rock, play Zelda's Lullaby, pay 200 Rupees", ['hammer'], adult),
+
+  // Fire Temple
+  gs('gs-fire-time', 'fire', 'Large lava room: ride the rising platform, play the Song of Time, beat the Like Like', ['forestClear', 'bombs'], adult),
+  gs('gs-fire-maze', 'fire', 'Rolling boulder maze: bomb the wall in the north', ['forestClear', 'bombs'], adult),
+  gs('gs-fire-pierre', 'fire', "Upper maze, facing south-west: play the Scarecrow's Song, Hookshot up, ride the lift", ['forestClear', 'scarecrow'], adult),
+  gs('gs-fire-door', 'fire', 'Through the door past the last one, around the corner', ['forestClear', 'scarecrow'], adult),
+  gs('gs-fire-hammer', 'fire', 'First room, right side of the lower floor: smash through, then smash the stones', ['hammer'], adult),
+
+  // Zora's River
+  gs('gs-river-soil', 'river', 'Soft soil by the bean seller: release a bug', ['bombs', 'bottle'], child),
+  gs('gs-river-rock', 'river', 'Near the Lullaby symbol, go down to the rocks below. On the back of one', ['bombs'], { ...child, disputed: 'Guides disagree on the spot: back of the lower rocks, or a wall behind the vines.' }),
+  gs('gs-river-adult-a', 'river', 'Raised section with the Gossip Stone, heading back toward the field', ['hookshot', 'beans'], adultNight),
+  gs('gs-river-adult-b', 'river', 'Last corner of the river: turn around and look high up', ['hookshot'], adultNight),
+  hp('hp-river-grotto', 'river', 'Carry a Cucco over the gap, climb the vines, take the Cucco in the grotto and flutter to the ledge', ['bombs'], child),
+  hp('hp-river-end', 'river', 'Same Cucco, up to where the path zig-zags: flutter back down to the ledge', ['bombs'], child),
+  hp('hp-river-frogs-a', 'river', 'Frogs halfway up: play the Song of Storms', ['storms', 'forestClear'], child),
+  hp('hp-river-frogs-b', 'river', "Same frogs: play other songs until all five grow, then win their game", ['storms', 'forestClear'], child),
+
+  // Zora's Domain
+  gs('gs-domain', 'domain', 'From the old diving spot, look left and Hookshot', ['hookshot'], adultNight),
+  hp('hp-domain-torches', 'domain', "Light the two torches behind the bottom waterfall with Din's Fire, then the rest quickly. A chest appears", ['dins'], child),
+  up('up-silver-scale', 'domain', 'Silver Scale', "Diving game on King Zora's left", ['bombs'], { ...child, grants: 'silverScale' }),
+  item('item-zora-tunic', 'domain', 'Zora Tunic', 'Use Blue Fire on King Zora, then talk to him', ['ironBoots'], adult),
+
+  // Zora's Fountain
+  gs('gs-fountain-tree', 'fountain', 'South-east island: roll into the trees', ['bombs'], child),
+  gs('gs-fountain-night', 'fountain', 'Right of Jabu-Jabu: use the Boomerang', ['boomerang'], { ...childNight, disputed: 'Guides disagree on the spot: right of Jabu-Jabu, or the log to its south-west.' }),
+  gs('gs-fountain-cave', 'fountain', 'Lift the huge rock next to the Fairy Fountain and go through the cave', ['silverGauntlets', 'lens'], adultNight),
+  hp('hp-fountain-ice', 'fountain', 'Hop east across the ice blocks', ['hookshot'], adult),
+  hp('hp-fountain-floor', 'fountain', 'Sink to the floor with the Iron Boots after leaving the Ice Cavern', ['ironBoots'], adult),
+  fairy('fairy-farore', 'fountain', "Farore's Wind", "South-east: bomb the big rock, play Zelda's Lullaby, pay 100 Rupees", ['bombs', 'lullaby'], child),
+
+  // Jabu-Jabu's Belly
+  gs('gs-jabu-vines', 'jabu', 'Opposite the map chest, up the vines once the water is raised', ['bombs'], child),
+  gs('gs-jabu-hole', 'jabu', 'Drop through the new hole after the tentacle: on the wall, use the Boomerang', ['boomerang'], child),
+  gs('gs-jabu-ceiling', 'jabu', 'On the ceiling of the path right after that drop', ['boomerang'], child),
+  gs('gs-jabu-last', 'jabu', 'Last room before the boss, on the vines', ['boomerang'], child),
+
+  // Ice Cavern
+  gs('gs-ice-blade', 'ice', 'Room with the spinning blade, up high', ['hookshot'], adult),
+  gs('gs-ice-compass', 'ice', 'At the Compass chest, look up to the north-west', ['hookshot', 'bottle'], adult),
+  gs('gs-ice-block', 'ice', 'As you step onto the ice block puzzle floor, look back high up', ['hookshot', 'bottle'], adult),
+  song('song-serenade', 'ice', 'Serenade of Water', 'At the end of the cavern', ['hammer'], adult),
+
+  // Lake Hylia
+  gs('gs-lake-soil', 'lake', 'Soft soil outside the Lakeside Laboratory: release a bug', ['bombs', 'bottle'], child),
+  gs('gs-lake-lab', 'lake', 'Side of the Laboratory, from the bridge: use the Boomerang', ['boomerang'], childNight),
+  gs('gs-lake-outcrop', 'lake', 'Far south-west outcrop: crawl through the gap', ['silverScale'], child),
+  gs('gs-lake-tree', 'lake', 'Longshot up to the vines on the tree where you land after the Water Temple', ['longshot'], adultNight),
+  gs('gs-lake-tank', 'lake', 'Bottom of the Lab tank with the Iron Boots, then Hookshot it', ['ironBoots'], adult),
+  hp('hp-lake-fish', 'lake', 'Fishing Pond: catch a fish of 55cm or more', ['bombs'], child),
+  hp('hp-lake-bean', 'lake', 'Ride the bean plant by the Lab, around to its roof', ['beans', 'hookshot'], adult),
+  hp('hp-lake-tank', 'lake', 'Lab tank: dive to the bottom using the Golden Scale, no boots', ['goldenScale'], adult),
+  bottle('bottle-lake', 'lake', 'Underwater right by the Zora warp exit. It holds a letter for the story', ['silverScale'], child),
+  up('up-golden-scale', 'lake', 'Golden Scale', 'Fishing Pond: catch a fish of 65cm or more', ['longshot'], { ...adult, grants: 'goldenScale' }),
+  item('item-fire-arrows', 'lake', 'Fire Arrows', 'Shoot the rising sun with an arrow from where you land after the Water Temple', ['longshot', 'bow'], adult),
+  song('song-scarecrow', 'lake', "Scarecrow's Song", 'Make up a tune as a child, then replay it to the scarecrow as an adult', ['hookshot'], { ...adult, grants: 'scarecrow' }),
+
+  // Forest Temple
+  gs('gs-forest-first', 'forest', 'First room: climb the vines and Hookshot it at the top', ['hookshot'], adult),
+  gs('gs-forest-north', 'forest', 'Central room, at the north door: turn around and look left', ['hookshot'], adult),
+  gs('gs-forest-balcony', 'forest', 'After the Boss Key, drop down to the balcony and follow the ledge south', ['hookshot', 'bow'], adult),
+  gs('gs-forest-pierre', 'forest', "East chamber, after pushing the shortcut block: play the Scarecrow's Song above the door", ['scarecrow', 'bow'], adult),
+  gs('gs-forest-rotate', 'forest', 'Rotating room: in one of the alcoves it reveals', ['bow'], adult),
+
+  // Water Temple
+  gs('gs-water-b1', 'water', 'Water at green: sink behind the floating block to B1, open the room with the switch', ['ironBoots'], adult),
+  gs('gs-water-whirlpool', 'water', 'After the Longshot: above the water at the U-bend of the whirlpool corridor', ['longshot'], adult),
+  gs('gs-water-pillar', 'water', 'Water at green: Longshot to the ceiling panel inside the central pillar', ['longshot'], adult),
+  gs('gs-water-boulder', 'water', 'After the Boss Key: rolling boulder hallway, up where the water cascades', ['longshot'], adult),
+  gs('gs-water-bomb', 'water', 'Water at green: blue-lit room, bomb the wall where you surface', ['longshot', 'bombs'], adult),
+
+  // Shadow Temple
+  gs('gs-shadow-scythe', 'shadow', 'Invisible scythe room: beat the Like Like, then through the door it opens', ['lens'], adult),
+  gs('gs-shadow-spikes', 'shadow', 'Falling spikes room: push the block to the end, climb on top, look up and left', ['lens'], adult),
+  gs('gs-shadow-fans', 'shadow', 'Fan rooms: after Hookshotting across the gap, turn around', ['lens', 'ironBoots'], adult),
+  gs('gs-shadow-pierre', 'shadow', "Bottom of the lift: pull the block, play the Scarecrow's Song", ['lens', 'scarecrow'], adult),
+  gs('gs-shadow-pots', 'shadow', 'After the boat, west room: throw bombs in the three pots', ['lens', 'bombs'], adult),
+
+  // Gerudo Valley
+  gs('gs-valley-bridge', 'valley', 'By the small plank bridge as you enter: use the Boomerang', ['boomerang'], childNight),
+  gs('gs-valley-soil', 'valley', 'Flutter down with the Cucco from the first chest, to the ledge with the cow: soft soil', ['boomerang', 'bottle'], child),
+  gs('gs-valley-rocks', 'valley', 'On the rock formation opposite the tents', ['longshot'], adultNight),
+  gs('gs-valley-tents', 'valley', 'On the wall behind the tents', ['longshot'], adultNight),
+  hp('hp-valley-chest', 'valley', 'Cucco left of the suspension bridge: glide south-west to the chest', ['boomerang'], child),
+  hp('hp-valley-nook', 'valley', 'Past the cow, climb the stairs by the waterfall to the hidden area', ['boomerang'], child),
+
+  // Gerudo Fortress
+  gs('gs-fortress-wall', 'fortress', 'Far east door, outside: on the wall to your right', ['lens'], adultNight),
+  gs('gs-fortress-target', 'fortress', 'Horseback Archery range: back of the north-eastern target', ['gerudoPass'], { ...adultNight, disputed: 'Guides differ on which target it is.' }),
+  hp('hp-fortress-chest', 'fortress', 'Inside, climb the ladder by your old cell, then Hookshot east to the chest', ['gerudoPass'], adult),
+  hp('hp-fortress-archery', 'fortress', 'Horseback Archery: 1000 points', ['gerudoPass', 'epona', 'bow'], adult),
+  up('up-quiver2', 'fortress', 'Biggest Quiver', 'Horseback Archery: 1400 points', ['gerudoPass', 'epona', 'bow'], adult),
+
+  // Training Ground
+  item('item-ice-arrows', 'training', 'Ice Arrows', 'Center chest after finding all nine keys. Needs items from the Spirit Temple', ['silverGauntlets', 'lens'], adult),
+
+  // Mirage Desert and Colossus
+  gs('gs-desert', 'desert', 'Small building past the quicksand: down the pit in the middle', ['gerudoPass'], adult),
+  gs('gs-colossus-birds', 'colossus', 'North of the area, beneath the birds', ['gerudoPass', 'hookshot'], adultNight),
+  gs('gs-colossus-soil', 'colossus', 'Warp in as a child: soft soil left of the temple door. Release a bug, plant a bean', ['requiem', 'bottle'], child),
+  gs('gs-colossus-bean', 'colossus', 'Ride the bean plant by the temple door', ['requiem', 'beans'], adultNight),
+  hp('hp-colossus-bean', 'colossus', 'Stay on the bean plant to the further rock', ['requiem', 'beans'], adult),
+  fairy('fairy-nayru', 'colossus', "Nayru's Love", "On your right as you enter: bomb the wall, play Zelda's Lullaby, pay 300 Rupees", ['gerudoPass'], adult),
+  song('song-requiem', 'colossus', 'Requiem of Spirit', 'Walk toward the Spirit Temple door', ['gerudoPass'], { ...adult, grants: 'requiem' }),
+
+  // Spirit Temple
+  gs('gs-spirit-gate', 'spirit', 'Child path: through the gate that opens once you collect the crystals', ['requiem', 'boomerang'], child),
+  gs('gs-spirit-statue', 'spirit', 'Giant statue room, far right of the statue from the map chest', ['requiem'], child),
+  gs('gs-spirit-door', 'spirit', 'After the sun block puzzle: look behind you above the door', ['requiem'], child),
+  gs('gs-spirit-time', 'spirit', 'Rolling boulder room: Song of Time moves the blue block. It hides in one alcove', ['silverGauntlets'], adult),
+  gs('gs-spirit-pierre', 'spirit', "Statue room, ledge by the chest hand: play the Scarecrow's Song", ['silverGauntlets', 'scarecrow'], adult),
 ];

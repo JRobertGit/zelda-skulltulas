@@ -7,10 +7,13 @@ import {
   checksFor,
   freshState,
   isTripWorthwhile,
+  lockoutsFor,
+  markNotYet,
   moveTo,
   neighbours,
   planTrip,
   returnItems,
+  revealedAreas,
   routeAreas,
   routeStops,
   sanitize,
@@ -21,6 +24,7 @@ import {
   toggleAbility,
   toggleDetour,
   toggleDone,
+  waitingFor,
 } from '../src/logic';
 import type { Entry, State } from '../src/types';
 
@@ -57,6 +61,42 @@ describe('data integrity', () => {
     }
     expect(seen.size).toBe(AREAS.length);
     for (const [a, b] of ROADS) expect(a).not.toBe(b);
+  });
+
+  it('lists exactly the totals the guides give', () => {
+    const count = (kind: Entry['kind']) => ENTRIES.filter((e) => e.kind === kind).length;
+    expect(count('skulltula')).toBe(TOTALS.skulltula);
+    expect(count('heart')).toBe(TOTALS.heart);
+    expect(count('bottle')).toBe(TOTALS.bottle);
+    expect(count('song')).toBe(TOTALS.song);
+  });
+
+  it('makes everything collectable once every check is confirmed', () => {
+    const all = { ...freshState(), owned: ABILITIES.map((a) => a.id), extraTokens: 100 };
+    const stuck = ENTRIES.filter((e) => statusOf(e, all) !== 'now').map((e) => e.id);
+    expect(stuck).toEqual([]);
+    expect(revealedAreas(all)).toHaveLength(AREAS.length);
+  });
+
+  it('can reach every check by following the askAfter chain', () => {
+    const owned = new Set<string>();
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const a of ABILITIES) {
+        if (!owned.has(a.id) && a.askAfter.every((p) => owned.has(p))) {
+          owned.add(a.id);
+          grew = true;
+        }
+      }
+    }
+    expect(owned.size).toBe(ABILITIES.length);
+  });
+
+  it('links each check to an entry that gives that check back', () => {
+    for (const a of ABILITIES.filter((x) => x.entry)) {
+      expect(ENTRIES.find((e) => e.id === a.entry)?.grants, a.id).toBe(a.id);
+    }
   });
 
   it('never lists more than the game totals', () => {
@@ -111,13 +151,84 @@ describe('checks', () => {
     const asked = (state: State) => AREAS.flatMap((a) => checksFor(a.id, state)).map((a) => a.id);
     expect(asked(freshState())).not.toContain('boomerang');
     expect(asked(freshState())).not.toContain('bombs');
-    expect(asked(withOwned('dekuClear', 'ocarina', 'lullaby'))).toContain('bombs');
-    expect(asked(withOwned('dekuClear', 'ocarina', 'lullaby', 'bombs'))).toContain('boomerang');
+    expect(asked(withOwned('dekuClear', 'ocarina', 'lullaby', 'saria', 'bracelet'))).toContain('bombs');
+    expect(asked(withOwned('dekuClear', 'ocarina', 'lullaby', 'saria', 'bracelet', 'bombs'))).toContain('boomerang');
   });
 
   it('stops asking about an ability once you confirm it', () => {
     const state = toggleAbility(freshState(), 'slingshot');
     expect(checksFor('deku', state).map((a) => a.id)).not.toContain('slingshot');
+  });
+});
+
+describe('answering not yet', () => {
+  it('stops asking, and clears the answer once you have it', () => {
+    let state = markNotYet(freshState(), 'slingshot');
+    expect(checksFor('deku', state)).toEqual([]);
+    expect(waitingFor('deku', state).map((a) => a.id)).toEqual(['slingshot']);
+    state = toggleAbility(state, 'slingshot');
+    expect(state.notYet).toEqual([]);
+    expect(waitingFor('deku', state)).toEqual([]);
+  });
+});
+
+describe('songs', () => {
+  const songs = (state: State) => state.done.filter((id) => entry(id)?.kind === 'song').length;
+
+  it('counts a song confirmed through a check', () => {
+    expect(songs(toggleAbility(freshState(), 'saria'))).toBe(1);
+  });
+
+  it('counts a song ticked directly, and treats it as confirmed', () => {
+    const state = toggleDone(freshState(), 'song-saria');
+    expect(songs(state)).toBe(1);
+    expect(state.owned).toContain('saria');
+  });
+
+  it('does not double count, and undoes both ways', () => {
+    const state = toggleDone(toggleAbility(freshState(), 'saria'), 'song-saria');
+    expect(songs(state)).toBe(0);
+    expect(state.owned).not.toContain('saria');
+  });
+
+  it("counts Epona's Song when ticked", () => {
+    expect(songs(toggleDone(withOwned('ocarina'), 'song-epona'))).toBe(1);
+  });
+});
+
+describe('spoiler protection', () => {
+  it('shows only the first two areas on a fresh start', () => {
+    expect(revealedAreas(freshState()).map((a) => a.id).sort()).toEqual(['deku', 'kokiri']);
+  });
+
+  it('asks nothing about later items on a fresh start', () => {
+    const asked = new Set(AREAS.flatMap((a) => checksFor(a.id, freshState())).map((a) => a.id));
+    expect([...asked].sort()).toEqual(['dekuClear', 'slingshot']);
+  });
+
+  it('keeps warnings hidden until they apply', () => {
+    expect(lockoutsFor('temple', freshState())).toEqual([]);
+    expect(lockoutsFor('temple', withOwned('songTime')).map((l) => l.id)).toEqual(['sword']);
+    expect(lockoutsFor('temple', withOwned('songTime', 'forestClear'))).toEqual([]);
+  });
+
+  it('routes only through areas you have unlocked', () => {
+    const state = setDestination(withOwned('dekuClear'), 'castle');
+    expect(routeAreas(state)).toEqual(['kokiri', 'field', 'market', 'castle']);
+    expect(sideTrips(state).map((t) => t.area)).not.toContain('trail');
+  });
+});
+
+describe('ages', () => {
+  it('keeps adult entries blocked until the sword is drawn', () => {
+    expect(statusOf(entry('hp-fortress-chest'), withOwned('gerudoPass'))).toBe('blocked');
+    expect(statusOf(entry('hp-fortress-chest'), withOwned('gerudoPass', 'adult'))).toBe('now');
+  });
+
+  it('blocks child entries between the sword and the Forest Temple', () => {
+    expect(statusOf(entry('gs-kak-nw'), withOwned('dekuClear'))).toBe('now');
+    expect(statusOf(entry('gs-kak-nw'), withOwned('dekuClear', 'adult'))).toBe('blocked');
+    expect(statusOf(entry('gs-kak-nw'), withOwned('dekuClear', 'adult', 'forestClear'))).toBe('now');
   });
 });
 

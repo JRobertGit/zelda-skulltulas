@@ -1,6 +1,7 @@
-import { ABILITIES, AREAS, ROADS } from './data/world';
+import { ABILITIES, AREAS, EXTRAS, GOSSIP_TOTAL, ROADS } from './data/world';
 import { ENTRIES } from './data/entries';
-import type { Ability, Entry, SideTrip, State, Status, TripStop } from './types';
+import { LOCKOUTS } from './data/lockouts';
+import type { Ability, Area, Entry, Lockout, SideTrip, State, Status, TripStop } from './types';
 
 /** Picking a route with fewer items than this isn't worth a dedicated trip. */
 export const WORTHWHILE_TRIP = 3;
@@ -14,13 +15,43 @@ export function freshState(): State {
     current: 'kokiri',
     visited: ['kokiri'],
     owned: [],
+    notYet: [],
     done: [],
     skipped: [],
     flagged: [],
     extraTokens: 0,
     destination: null,
     detours: [],
+    extras: [],
+    gossip: 0,
   };
+}
+
+const hasAll = (state: State, ids: string[]) => ids.every((id) => state.owned.includes(id));
+
+/** Areas the player has unlocked. The rest stay hidden so the map can't spoil them. */
+export function revealedAreas(state: State): Area[] {
+  return AREAS.filter((a) => hasAll(state, a.revealAfter) || a.id === state.current);
+}
+
+export function lockoutsFor(area: string | null, state: State, lockouts: Lockout[] = LOCKOUTS): Lockout[] {
+  return lockouts.filter(
+    (l) =>
+      l.area === area &&
+      hasAll(state, l.showAfter) &&
+      !(l.hideAfter && hasAll(state, l.hideAfter)) &&
+      !(l.hideIfDone && state.done.includes(l.hideIfDone)),
+  );
+}
+
+/** All the checks an entry depends on, including the age it must be collected at. */
+function requirements(entry: Entry): string[] {
+  return entry.age === 'adult' ? ['adult', ...entry.needs] : entry.needs;
+}
+
+/** After drawing the sword, childhood is out of reach until the Forest Temple is finished. */
+function childLocked(entry: Entry, state: State): boolean {
+  return entry.age === 'child' && state.owned.includes('adult') && !state.owned.includes('forestClear');
 }
 
 export function tokenCount(state: State, entries: Entry[] = ENTRIES): number {
@@ -30,7 +61,8 @@ export function tokenCount(state: State, entries: Entry[] = ENTRIES): number {
 
 export function statusOf(entry: Entry, state: State, entries: Entry[] = ENTRIES): Status {
   if (state.done.includes(entry.id)) return 'done';
-  const hasNeeds = entry.needs.every((n) => state.owned.includes(n));
+  if (childLocked(entry, state)) return 'blocked';
+  const hasNeeds = requirements(entry).every((n) => state.owned.includes(n));
   const hasTokens = entry.minTokens === undefined || tokenCount(state, entries) >= entry.minTokens;
   return hasNeeds && hasTokens ? 'now' : 'blocked';
 }
@@ -46,9 +78,10 @@ export function availableIn(area: string, state: State, entries: Entry[] = ENTRI
 /** Questions worth asking here: they'd unblock something, and their earlier steps are confirmed. */
 export function checksFor(area: string, state: State, entries: Entry[] = ENTRIES): Ability[] {
   const blocked = entriesIn(area, entries).filter((e) => statusOf(e, state, entries) === 'blocked');
-  const wanted = new Set(blocked.flatMap((e) => e.needs).filter((n) => !state.owned.includes(n)));
+  const wanted = new Set(blocked.flatMap(requirements).filter((n) => !state.owned.includes(n)));
   return ABILITIES.filter(
-    (a) => wanted.has(a.id) && a.askAfter.every((p) => state.owned.includes(p)),
+    (a) =>
+      wanted.has(a.id) && hasAll(state, a.askAfter) && !state.notYet.includes(a.id),
   );
 }
 
@@ -56,14 +89,15 @@ export function neighbours(area: string): string[] {
   return ROADS.flatMap(([a, b]) => (a === area ? [b] : b === area ? [a] : []));
 }
 
-function shortestPath(from: string, to: string): string[] {
+function shortestPath(from: string, to: string, state: State): string[] {
+  const open = new Set(revealedAreas(state).map((a) => a.id));
   const previous = new Map<string, string | null>([[from, null]]);
   const queue = [from];
   while (queue.length > 0) {
     const here = queue.shift()!;
     if (here === to) break;
     for (const next of neighbours(here)) {
-      if (!previous.has(next)) {
+      if (open.has(next) && !previous.has(next)) {
         previous.set(next, here);
         queue.push(next);
       }
@@ -91,7 +125,7 @@ export function planTrip(state: State, entries: Entry[] = ENTRIES): TripStop[] {
   const stops: TripStop[] = [];
   let here = state.current;
   while (remaining.size > 0) {
-    const paths = [...remaining].map((area) => shortestPath(here, area)).filter((p) => p.length > 0);
+    const paths = [...remaining].map((area) => shortestPath(here, area, state)).filter((p) => p.length > 0);
     if (paths.length === 0) break;
     const path = paths.reduce((best, p) => (p.length < best.length ? p : best));
     for (const area of path.slice(1)) {
@@ -110,9 +144,9 @@ export function isTripWorthwhile(state: State, entries: Entry[] = ENTRIES): bool
 /** The areas to walk through in order, starting at the current one, including added side trips. */
 export function routeAreas(state: State): string[] {
   if (!state.destination) return [state.current];
-  const path = shortestPath(state.current, state.destination);
+  const path = shortestPath(state.current, state.destination, state);
   const distanceFromPath = (area: string) =>
-    Math.min(...path.map((node) => shortestPath(node, area).length - 1));
+    Math.min(...path.map((node) => shortestPath(node, area, state).length - 1));
   const offRoute = state.detours
     .filter((d) => !path.includes(d))
     .sort((a, b) => distanceFromPath(b) - distanceFromPath(a));
@@ -122,10 +156,10 @@ export function routeAreas(state: State): string[] {
     for (const detour of offRoute) {
       if (route.includes(detour)) continue;
       const attachesHere = path.find(
-        (p) => shortestPath(p, detour).length - 1 === distanceFromPath(detour),
+        (p) => shortestPath(p, detour, state).length - 1 === distanceFromPath(detour),
       );
       if (attachesHere !== node) continue;
-      const out = shortestPath(node, detour);
+      const out = shortestPath(node, detour, state);
       route.push(...out.slice(1), ...out.slice(0, -1).reverse());
     }
   }
@@ -147,13 +181,13 @@ export function routeStops(state: State, entries: Entry[] = ENTRIES): TripStop[]
 /** Off-route areas worth a detour, or already added, with the best value first. */
 export function sideTrips(state: State, entries: Entry[] = ENTRIES): SideTrip[] {
   if (!state.destination) return [];
-  const path = shortestPath(state.current, state.destination);
+  const path = shortestPath(state.current, state.destination, state);
   const trips: (SideTrip & { value: number })[] = [];
-  for (const { id: area } of AREAS) {
+  for (const { id: area } of revealedAreas(state)) {
     if (path.includes(area)) continue;
     const items = availableIn(area, state, entries).length;
     if (items === 0) continue;
-    const distance = Math.min(...path.map((node) => shortestPath(node, area).length - 1));
+    const distance = Math.min(...path.map((node) => shortestPath(node, area, state).length - 1));
     const steps = distance * 2;
     const value = items / steps;
     const added = state.detours.includes(area);
@@ -188,16 +222,48 @@ export function toggleDone(state: State, id: string, entries: Entry[] = ENTRIES)
     finishing && entry.grants && !state.owned.includes(entry.grants)
       ? [...state.owned, entry.grants]
       : state.owned;
+  // A check linked to this entry follows it, so a song ticked either way counts once.
+  const linked = ABILITIES.find((a) => a.entry === id)?.id;
+  const nextOwned = !finishing && linked ? owned.filter((x) => x !== linked) : owned;
   return {
     ...state,
-    owned,
+    owned: nextOwned,
+    notYet: state.notYet.filter((x) => !nextOwned.includes(x)),
     done: toggled(state.done, id),
     skipped: state.skipped.filter((x) => x !== id),
   };
 }
 
 export function toggleAbility(state: State, id: string): State {
-  return { ...state, owned: toggled(state.owned, id) };
+  const entry = ABILITIES.find((a) => a.id === id)?.entry;
+  const owning = !state.owned.includes(id);
+  const done = !entry
+    ? state.done
+    : owning
+      ? [...new Set([...state.done, entry])]
+      : state.done.filter((x) => x !== entry);
+  return {
+    ...state,
+    owned: toggled(state.owned, id),
+    done,
+    notYet: state.notYet.filter((x) => x !== id),
+    skipped: state.skipped.filter((x) => x !== entry),
+  };
+}
+
+export function markNotYet(state: State, id: string): State {
+  return state.notYet.includes(id) ? state : { ...state, notYet: [...state.notYet, id] };
+}
+
+/** Checks the player said "not yet" to that could unblock something in this area. */
+export function waitingFor(area: string, state: State, entries: Entry[] = ENTRIES): Ability[] {
+  const blocked = entriesIn(area, entries).filter((e) => statusOf(e, state, entries) === 'blocked');
+  const wanted = new Set(blocked.flatMap(requirements));
+  return ABILITIES.filter((a) => state.notYet.includes(a.id) && wanted.has(a.id));
+}
+
+export function toggleExtra(state: State, id: string): State {
+  return { ...state, extras: toggled(state.extras, id) };
 }
 
 export function toggleFlag(state: State, id: string): State {
@@ -239,6 +305,7 @@ export function sanitize(raw: unknown): State {
     current,
     visited: visited.includes(current) ? visited : [...visited, current],
     owned: pick(data.owned, abilityIds),
+    notYet: pick(data.notYet, abilityIds),
     done: pick(data.done, entryIds),
     skipped: pick(data.skipped, entryIds),
     flagged: pick(data.flagged, entryIds),
@@ -248,5 +315,7 @@ export function sanitize(raw: unknown): State {
         ? data.destination
         : null,
     detours: pick(data.detours, areaIds),
+    extras: pick(data.extras, new Set(EXTRAS.map((x) => x.id))),
+    gossip: Number.isFinite(Number(data.gossip)) ? Math.min(GOSSIP_TOTAL, Math.max(0, Math.floor(Number(data.gossip)))) : 0,
   };
 }

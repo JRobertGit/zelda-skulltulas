@@ -1,4 +1,6 @@
-export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'reward';
+export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward';
+
+export type Age = 'child' | 'adult';
 
 export type SourceId = 'rpgsite' | 'respec' | 'game8' | 'nintendo';
 
@@ -7,9 +9,9 @@ export interface Area {
   name: string;
   x: number;
   y: number;
-  biome: 'forest' | 'field' | 'town' | 'castle' | 'ranch' | 'village' | 'grave' | 'dungeon';
-  /** True when this area is known to hold more finds that this build doesn't list yet. */
-  moreLater: boolean;
+  biome: 'forest' | 'field' | 'town' | 'castle' | 'ranch' | 'village' | 'grave' | 'dungeon' | 'water';
+  /** The area stays off the map until the player has confirmed all of these. */
+  revealAfter: string[];
 }
 
 export interface Ability {
@@ -17,6 +19,8 @@ export interface Ability {
   /** Short question text, shown only once askAfter is satisfied. */
   label: string;
   askAfter: string[];
+  /** Collectible that this check also completes, such as a song. */
+  entry?: string;
 }
 
 export interface Entry {
@@ -27,6 +31,7 @@ export interface Entry {
   where: string;
   needs: string[];
   night?: boolean;
+  age?: Age;
   minTokens?: number;
   /** Ability the player automatically has once this entry is ticked. */
   grants?: string;
@@ -40,6 +45,12 @@ export interface Lockout {
   /** Area where the warning appears. Null means it only appears in the global watch list. */
   area: string | null;
   severity: 'forever' | 'for-a-while' | 'recoverable';
+  /** Hidden until these are confirmed, so a warning can't spoil what comes later. */
+  showAfter: string[];
+  /** No longer relevant once these are confirmed. */
+  hideAfter?: string[];
+  /** No longer relevant once this entry is collected. */
+  hideIfDone?: string;
   title: string;
   detail: string;
   disputed?: string;
@@ -51,6 +62,8 @@ export interface State {
   current: string;
   visited: string[];
   owned: string[];
+  /** Checks the player answered "not yet", so they stop being asked. */
+  notYet: string[];
   done: string[];
   /** Entries the player knowingly left behind through the leave warning. */
   skipped: string[];
@@ -62,6 +75,10 @@ export interface State {
   destination: string | null;
   /** Side trips the player has added to the current route. */
   detours: string[];
+  /** Goals with no place on the map, such as the Hall of Fallen Foes. */
+  extras: string[];
+  /** Zelda Notes Gossip Quests finished. */
+  gossip: number;
 }
 
 export type Status = 'done' | 'now' | 'blocked';

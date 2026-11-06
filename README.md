@@ -8,6 +8,8 @@ An unofficial phone tracker for reaching 100% in the Switch 2 remake of Ocarina 
 
 Open **https://jrobertgit.github.io/zelda-skulltulas/** on your phone.
 
+It covers the whole game, and areas stay hidden until you reach them. Nothing has been checked in the game itself yet, so use **Wrong?** on anything that doesn't match.
+
 Progress is saved in the phone's browser and tied to the exact address. Use **Progress > Back up** to keep a copy, or to move to another address.
 
 ## Run it locally

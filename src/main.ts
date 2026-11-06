@@ -1,7 +1,6 @@
 import './styles.css';
-import { ABILITIES, AREAS, TOTALS } from './data/world';
+import { ABILITIES, AREAS, EXTRAS, GOSSIP_TOTAL, TOTALS } from './data/world';
 import { ENTRIES } from './data/entries';
-import { LOCKOUTS } from './data/lockouts';
 import { bottle, kindIcon, note, quarteredHeart, spider, ui } from './icons';
 import {
   availableIn,
@@ -9,6 +8,8 @@ import {
   entriesIn,
   freshState,
   isTripWorthwhile,
+  lockoutsFor,
+  markNotYet,
   moveTo,
   neighbours,
   planTrip,
@@ -17,12 +18,15 @@ import {
   setDestination,
   sideTrips,
   returnItems,
+  revealedAreas,
   statusOf,
   tokenCount,
   toggleAbility,
   toggleDetour,
   toggleDone,
+  toggleExtra,
   toggleFlag,
+  waitingFor,
 } from './logic';
 import { mapSvg } from './map';
 import { downloadBackup, load, readBackup, save } from './store';
@@ -33,6 +37,8 @@ type Tab = 'here' | 'trips' | 'progress';
 let state: State = load();
 let tab: Tab = 'here';
 let leavingTo: string | null = null;
+/** An area being looked at. Looking never counts as moving there. */
+let viewing: string | null = null;
 let choosingDestination = false;
 let confirmingReset = false;
 let openDetail: string | null = null;
@@ -61,6 +67,8 @@ function entryCard(entry: Entry): string {
     <div class="card-body">
       <h3>${esc(entry.name)}
         ${entry.night ? `<span class="pill night">${ui.moon}Night</span>` : ''}
+        ${entry.age && state.owned.includes('adult') ? `<span class="pill age">${entry.age === 'child' ? 'Child' : 'Adult'}</span>` : ''}
+        ${entry.sources.includes('game8') || entry.disputed ? '' : '<span class="pill single">One guide</span>'}
         ${state.skipped.includes(entry.id) && !done ? '<span class="pill skipped">Skipped</span>' : ''}
       </h3>
       <p>${esc(entry.where)}</p>
@@ -85,31 +93,37 @@ function lockoutBanner(lockout: Lockout): string {
 }
 
 function hereView(): string {
-  const area = AREAS.find((a) => a.id === state.current)!;
+  const area = AREAS.find((a) => a.id === (viewing ?? state.current))!;
+  const isHere = area.id === state.current;
   const entries = entriesIn(area.id);
   const now = entries.filter((e) => statusOf(e, state) === 'now');
   const done = entries.filter((e) => statusOf(e, state) === 'done');
   const blocked = entries.filter((e) => statusOf(e, state) === 'blocked');
   const checks = checksFor(area.id, state);
+  const waiting = waitingFor(area.id, state);
   const nearby = neighbours(area.id)
     .map((id) => ({ id, count: state.visited.includes(id) ? availableIn(id, state).length : 0 }))
     .filter((n) => n.count > 0);
 
   const route = routeAreas(state);
 
-  return `${mapSvg(state, route, route)}
+  return `${mapSvg(state, route, [...new Set([...route, area.id])], area.id)}
     ${headingBar()}
     <section class="panel">
       <header class="panel-head">
         <h2>${esc(area.name)}</h2>
-        <span class="count ${now.length ? 'hot' : ''}">${now.length ? `${now.length} to get` : checks.length ? 'Answer below' : 'All clear'}</span>
+        <span class="count ${now.length ? 'hot' : ''}">${now.length ? `${now.length} to get` : checks.length ? 'Answer below' : 'Nothing yet'}</span>
       </header>
-      ${LOCKOUTS.filter((l) => l.area === area.id).map(lockoutBanner).join('')}
-      ${checks.length ? `<div class="checks"><span class="checks-label">Tap any that are true, so I can show what you can reach</span>
-        ${checks.map((a) => `<button class="chip" data-action="own" data-id="${a.id}" data-key="o-${a.id}">${esc(a.label)}</button>`).join('')}</div>` : ''}
+      ${isHere ? '' : `<button class="im-here" data-action="arrive" data-id="${area.id}" data-key="arrive">${ui.foot}I'm here now</button>`}
+      ${lockoutsFor(area.id, state).map(lockoutBanner).join('')}
+      ${checks.length ? `<div class="checks"><span class="checks-label">Do you have these yet?</span>
+        ${checks.map((a) => `<div class="check-row"><span>${esc(a.label)}</span>
+          <button class="chip yes" data-action="own" data-id="${a.id}" data-key="o-${a.id}">Yes</button>
+          <button class="chip" data-action="not-yet" data-id="${a.id}" data-key="n-${a.id}">Not yet</button></div>`).join('')}</div>` : ''}
+      ${waiting.length ? `<div class="waiting"><span>Got it now?</span>${waiting.map((a) => `<button class="chip small" data-action="own" data-id="${a.id}" data-key="w-${a.id}">${esc(a.label)}</button>`).join('')}</div>` : ''}
       ${now.map(entryCard).join('')}
       ${now.length === 0 && checks.length === 0 ? `<div class="empty">${ui.check}<p>Nothing to grab here right now.</p></div>` : ''}
-      ${blocked.length || area.moreLater ? `<p class="later">${ui.lock}More here later. You don't need to do anything yet.</p>` : ''}
+      ${blocked.length ? `<p class="later">${ui.lock}More here later. You don't need to do anything yet.</p>` : ''}
       ${state.destination ? '' : nearby.map((n) => `<button class="nearby" data-action="go" data-id="${n.id}" data-key="n-${n.id}">${ui.foot}<span>Next door: <b>${esc(areaName(n.id))}</b> has ${n.count} ready</span></button>`).join('')}
       ${done.length ? `<details class="done-list"><summary>${done.length} collected here</summary>${done.map(entryCard).join('')}</details>` : ''}
     </section>
@@ -134,7 +148,7 @@ function onTheWay(): string {
         return `<li class="${entries.length ? '' : 'pass'}">
           <span class="route-num">${index + 1}</span>
           <div class="route-stop"><h3>${esc(areaName(stop.area))}</h3>
-          ${LOCKOUTS.filter((l) => l.area === stop.area).map(lockoutBanner).join('')}
+          ${lockoutsFor(stop.area, state).map(lockoutBanner).join('')}
           ${entries.length === 0 ? '<p class="muted">Nothing to grab here yet</p>' : entries.map(entryCard).join('')}
           </div>
         </li>`;
@@ -148,7 +162,7 @@ function onTheWay(): string {
         </div>
         <button class="btn ${trip.added ? '' : 'primary'}" data-action="detour" data-id="${trip.area}" data-key="dt-${trip.area}" aria-pressed="${trip.added}">${trip.added ? 'Remove' : 'Add'}</button>
       </article>`).join('')}` : ''}
-    <p class="muted way-note">Tap an area on the map when you arrive there.</p>
+    <p class="muted way-note">Tap an area on the map to look at it, then I'm here now when you arrive.</p>
   </section>`;
 }
 
@@ -158,7 +172,7 @@ function destinationSheet(): string {
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dest-title">
       <h2 id="dest-title">Where are you heading?</h2>
       <div class="dest-grid">
-        ${AREAS.filter((a) => a.id !== state.current).map((a) => `<button class="btn ${a.id === state.destination ? 'primary' : ''}" data-action="destination" data-id="${a.id}" data-key="dest-${a.id}">${esc(a.name)}</button>`).join('')}
+        ${revealedAreas(state).filter((a) => a.id !== state.current).map((a) => `<button class="btn ${a.id === state.destination ? 'primary' : ''}" data-action="destination" data-id="${a.id}" data-key="dest-${a.id}">${esc(a.name)}</button>`).join('')}
       </div>
       <div class="sheet-actions">
         ${state.destination ? '<button class="btn" data-action="destination" data-key="dest-none">Clear my route</button>' : ''}
@@ -215,7 +229,11 @@ function progressView(): string {
     `<i class="${i < tokens ? 'lit' : ''}"></i>`,
   ).join('');
   const flagged = state.flagged.length;
-  const globals = LOCKOUTS.filter((l) => l.area === null);
+  const globals = lockoutsFor(null, state);
+  const named = (kind: Kind) => ENTRIES.filter((e) => e.kind === kind && state.done.includes(e.id)).map((e) => e.name);
+  const nameList = (names: string[]) => names.length ? `<ul class="names">${names.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
+  const others: [string, Kind[]][] = [['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Masks', ['mask']], ['Other items', ['reward', 'shield']]];
+  const extras = EXTRAS.filter((x) => (x.after as readonly string[]).every((a) => state.owned.includes(a)));
   const owned = ABILITIES.filter((a) => state.owned.includes(a.id));
   return `<section class="panel flush">
     <div class="stat">
@@ -239,13 +257,25 @@ function progressView(): string {
       <div class="stat">
         <header><h2>Songs</h2><b>${songs}<small>/${TOTALS.song}</small></b></header>
         <div class="slots tight">${Array.from({ length: TOTALS.song }, (_, i) => note(i < songs)).join('')}</div>
+        ${nameList(named('song'))}
       </div>
     </div>
-    <div class="stat coming">
-      <header><h2>Coming in later builds</h2></header>
-      <ul class="soon">
-        <li>Other areas and dungeons</li><li>Masks</li><li>Hall of Fallen Foes</li><li>Gossip Quests</li><li>amiibo masks</li><li>Zelda Notes quiz (long-term goal)</li>
-      </ul>
+    ${others.map(([title, kinds]) => {
+      const all = ENTRIES.filter((e) => kinds.includes(e.kind));
+      const got = all.filter((e) => state.done.includes(e.id));
+      return `<div class="stat"><header><h2>${title}</h2><b>${got.length}<small>/${all.length}</small></b></header>
+        <div class="bar"><i style="width:${all.length ? (got.length / all.length) * 100 : 0}%"></i></div>
+        ${nameList(got.map((e) => e.name))}</div>`;
+    }).join('')}
+    <div class="stat">
+      <header><h2>Extras</h2></header>
+      ${extras.map((x) => `<button class="extra" data-action="extra-goal" data-id="${x.id}" data-key="x-${x.id}" aria-pressed="${state.extras.includes(x.id)}"><span class="tick small">${ui.check}</span>${esc(x.label)}</button>`).join('')}
+      <div class="stepper"><span>Gossip Quests (Zelda Notes)</span>
+        <button data-action="gossip" data-id="-1" data-key="g-" aria-label="One fewer">−</button>
+        <output>${state.gossip}/${GOSSIP_TOTAL}</output>
+        <button data-action="gossip" data-id="1" data-key="g+" aria-label="One more">+</button>
+      </div>
+      <p class="muted quiz">Zelda Notes quiz: your long-term goal, tracked in the app itself. It isn't part of your 100% here.</p>
     </div>
     <div class="stat">
       <header><h2>Always keep in mind</h2></header>
@@ -265,7 +295,7 @@ function progressView(): string {
         ? `<div class="save-row"><button class="btn danger" data-action="reset-yes" data-key="ry">Erase everything</button><button class="btn" data-action="reset-no" data-key="rn">Keep it</button></div>`
         : `<button class="btn subtle" data-action="reset" data-key="r">Start over</button>`}
     </div>
-    <p class="fineprint">Unofficial fan tool, not connected with Nintendo. Data comes from early community guides and may contain mistakes.</p>
+    <p class="fineprint">Unofficial fan tool, not connected with Nintendo. Data comes from early community guides and hasn't been checked in the game. "One guide" means only one source covers it. Warp songs aren't counted in routes.</p>
   </section>`;
 }
 
@@ -308,6 +338,7 @@ function render(): void {
     </nav>
     ${leaveSheet()}
     ${destinationSheet()}`;
+  centerMap();
   if (leavingTo) {
     root.querySelector<HTMLElement>('[data-key="stay"]')?.focus();
   } else if (focusKey) {
@@ -315,8 +346,21 @@ function render(): void {
   }
 }
 
-function go(area: string): void {
-  if (area === state.current) return;
+/** The map scrolls inside its own frame, so keep the area in focus visible. */
+function centerMap(): void {
+  const wrap = root.querySelector<HTMLElement>('.map-wrap');
+  const node = wrap?.querySelector(`.node[data-id="${viewing ?? state.current}"]`);
+  if (!wrap || !node) return;
+  const offset = node.getBoundingClientRect().top - wrap.getBoundingClientRect().top;
+  wrap.scrollTop = wrap.scrollTop + offset - wrap.clientHeight / 2 + 20;
+}
+
+function arrive(area: string): void {
+  viewing = null;
+  if (area === state.current) {
+    render();
+    return;
+  }
   if (availableIn(state.current, state).length > 0) {
     leavingTo = area;
     render();
@@ -328,8 +372,23 @@ function go(area: string): void {
 function handle(action: string, id: string | undefined): void {
   switch (action) {
     case 'go':
-      tab = tab === 'trips' ? 'trips' : 'here';
-      if (id) go(id);
+      // Tapping the map only looks at an area.
+      tab = 'here';
+      viewing = id === state.current ? null : (id ?? null);
+      render();
+      window.scrollTo(0, 0);
+      break;
+    case 'arrive':
+      if (id) arrive(id);
+      break;
+    case 'not-yet':
+      if (id) update(markNotYet(state, id));
+      break;
+    case 'extra-goal':
+      if (id) update(toggleExtra(state, id));
+      break;
+    case 'gossip':
+      update({ ...state, gossip: Math.min(GOSSIP_TOTAL, Math.max(0, state.gossip + Number(id))) });
       break;
     case 'tab':
       tab = id as Tab;
@@ -372,6 +431,7 @@ function handle(action: string, id: string | undefined): void {
     case 'leave': {
       const target = leavingTo;
       leavingTo = null;
+      viewing = null;
       if (target) update(moveTo(state, target));
       break;
     }
