@@ -10,6 +10,6 @@ rm -rf .git
 git init -q -b gh-pages
 git add -A
 git commit -q -m "Deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-git push -q --force "$remote" gh-pages
+git -c credential.https://github.com.helper= -c 'credential.https://github.com.helper=!gh auth git-credential' push -q --force "$remote" gh-pages
 rm -rf .git
 echo "Published. GitHub Pages may take a minute to update."
