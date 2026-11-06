@@ -13,6 +13,8 @@ interface Options {
   night?: boolean;
   age?: Age;
   minTokens?: number;
+  after?: string;
+  quiet?: boolean;
   grants?: string;
   disputed?: string;
   sources?: SourceId[];
@@ -37,6 +39,8 @@ const mask = (id: string, area: string, name: string, where: string, needs: stri
   make('mask', id, area, name, where, needs, { age: 'child', ...o });
 const bottle = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
   make('bottle', id, area, 'Empty Bottle', where, needs, { grants: 'bottle', ...o });
+const chest = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('chest', id, area, name, where, needs, o);
 const item = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
   make('reward', id, area, name, where, needs, o);
 
@@ -93,12 +97,16 @@ export const ENTRIES: Entry[] = [
   item('item-bombchus', 'market', 'Bombchus', 'Bombchu Bowling prize', ['bombs'], child),
   hp('hp-market-dog', 'market', "Bring Richard to the dog lady. Of three white dogs, he usually starts in the alley near her house", ['dekuClear'], childNight),
   hp('hp-market-chest', 'market', 'Treasure Chest game in the back alley: the Lenses of Truth show what\'s inside', ['lens', 'forestClear'], childNight),
-  mask('mask-keaton', 'market', 'Keaton Mask', 'Borrow at the Happy Mask Shop, then sell to the guard at the Death Mountain gate in Kakariko', ['bombs']),
-  mask('mask-skull', 'market', 'Skull Mask', 'Borrow next, wear it at the Forest Stage grotto, then sell to the lone Skull Kid in the Lost Woods', ['bombs'], { grants: 'maskSkull' }),
-  mask('mask-spooky', 'market', 'Spooky Mask', 'Borrow next, sell to the kid in the Graveyard during the day', ['bombs']),
-  mask('mask-bunny', 'market', 'Bunny Hood', 'Borrow next, sell to the running man in Hyrule Field. He often passes the Market gate early in the day', ['bombs']),
-  mask('mask-others', 'market', 'Zora, Goron and Gerudo Masks', 'Unlocked once the Bunny Hood is paid off', ['bombs']),
-  mask('mask-truth', 'market', 'Mask of Truth', 'Given by the shop owner once the sales are done', ['bombs'], { grants: 'maskTruth' }),
+  mask('mask-keaton', 'market', 'Keaton Mask: borrow', 'Happy Mask Shop', ['bombs']),
+  mask('mask-skull', 'market', 'Skull Mask: borrow', 'Happy Mask Shop, once the Keaton Mask is paid off. Wear it at the Forest Stage grotto before selling', ['bombs'], { grants: 'maskSkull', after: 'mask-keaton-sell' }),
+  mask('mask-spooky', 'market', 'Spooky Mask: borrow', 'Happy Mask Shop, once the Skull Mask is paid off', ['bombs'], { after: 'mask-skull-sell' }),
+  mask('mask-bunny', 'market', 'Bunny Hood: borrow', 'Happy Mask Shop, once the Spooky Mask is paid off', ['bombs'], { after: 'mask-spooky-sell' }),
+  mask('mask-others', 'market', 'Zora, Goron and Gerudo Masks', 'Unlocked in the shop once the Bunny Hood is paid off', ['bombs'], { after: 'mask-bunny-sell' }),
+  mask('mask-truth', 'market', 'Mask of Truth', 'The shop owner gives it to you once the Bunny Hood is paid off', ['bombs'], { grants: 'maskTruth', after: 'mask-bunny-sell' }),
+  mask('mask-keaton-sell', 'kakariko', 'Keaton Mask: sell', 'To the guard at the Death Mountain gate. Pay the shop afterwards', ['bombs'], { after: 'mask-keaton' }),
+  mask('mask-skull-sell', 'lostwoods', 'Skull Mask: sell', 'To the lone Skull Kid, first left from Kokiri. Use it at the Forest Stage grotto first. Pay the shop afterwards', ['bombs'], { after: 'mask-skull' }),
+  mask('mask-spooky-sell', 'graveyard', 'Spooky Mask: sell', 'To the kid here during the day. Pay the shop afterwards', ['bombs'], { after: 'mask-spooky' }),
+  mask('mask-bunny-sell', 'field', 'Bunny Hood: sell', 'To the running man. He often passes the Market gate early in the day. Pay the shop afterwards', ['bombs'], { after: 'mask-bunny' }),
 
   // Hyrule Castle
   gs('gs-castle-tree', 'castle', 'Before climbing the vine to the castle, look right behind the wall: roll into the tree', ['dekuClear'], { ...childNight, disputed: 'Guides differ on the exact tree and on whether it needs night.' }),
@@ -143,7 +151,6 @@ export const ENTRIES: Entry[] = [
   item('reward-40', 'kakariko', '20 Bombchus', 'House of Skulltula, 40 tokens', [], { minTokens: 40, sources: ['respec', 'game8'] }),
   hp('hp-kak-50', 'kakariko', 'House of Skulltula, 50 tokens', [], { minTokens: 50, sources: BOTH }),
   item('reward-100', 'kakariko', 'Endless 200 Rupees', 'House of Skulltula, 100 tokens', [], { minTokens: 100, sources: BOTH }),
-  item('quest-biggoron', 'kakariko', 'Biggoron Sword trading quest', 'Pocket Egg from the Cucco Lady starts it. Timed legs ahead: see the warning below', ['hookshot', 'longshot'], adult),
 
   // Graveyard
   gs('gs-grave-soil', 'graveyard', 'Soft soil in the north-west: release a bottled bug', ['dekuClear', 'bottle'], child),
@@ -303,4 +310,96 @@ export const ENTRIES: Entry[] = [
   gs('gs-spirit-door', 'spirit', 'After the sun block puzzle: look behind you above the door', ['requiem'], child),
   gs('gs-spirit-time', 'spirit', 'Rolling boulder room: Song of Time moves the blue block. It hides in one alcove', ['silverGauntlets'], adult),
   gs('gs-spirit-pierre', 'spirit', "Statue room, ledge by the chest hand: play the Scarecrow's Song", ['silverGauntlets', 'scarecrow'], adult),
+  // Biggoron Sword trading quest, in order
+  ...([
+    ['q-egg', 'kakariko', 'Pocket Egg', 'Talk to the Cucco Lady', ['adult'], undefined],
+    ['q-cucco', 'kakariko', 'Pocket Cucco', "Let the egg hatch, then use it next to Talon in the house in the middle of the village", ['adult'], 'q-egg'],
+    ['q-cojiro', 'kakariko', 'Cojiro', 'Take the Pocket Cucco back to the Cucco Lady', ['adult'], 'q-cucco'],
+    ['q-mushroom', 'lostwoods', 'Odd Mushroom', "First left from Kokiri: show Cojiro to the Master Craftsman's Son. A 4 minute timer starts, no warps", ['adult'], 'q-cojiro'],
+    ['q-poultice', 'kakariko', 'Odd Poultice', 'Bring the mushroom to the Potion Shop within 4 minutes', ['adult'], 'q-mushroom'],
+    ['q-saw', 'lostwoods', "Poacher's Saw", 'Same spot, now Fado: hand over the Odd Poultice', ['adult'], 'q-poultice'],
+    ['q-broken', 'valley', 'Broken Goron Sword', "Jump the bridge on Epona or Longshot across, then show the saw to the Master Craftsman", ['epona'], 'q-saw'],
+    ['q-prescription', 'trail', 'Prescription', 'Mountain peak: show the sword to Biggoron', ['adult'], 'q-broken'],
+    ['q-frog', 'domain', 'Eyeball Frog', 'Show the Prescription to King Zora. A 2:30 timer starts, no warps. Dive through the shortcut to the lake', ['adult'], 'q-prescription'],
+    ['q-drops', 'lake', 'Eye Drops', 'Give the frog to the Lakeside Lab scientist within 2:30. A 3:30 timer starts, no warps', ['adult'], 'q-frog'],
+    ['q-receipt', 'trail', 'Biggoron Receipt', 'Run the drops back to Biggoron within 3:30. Epona helps', ['adult'], 'q-drops'],
+    ['q-biggoron', 'trail', 'Biggoron Sword', 'Wait three days, then show the receipt. The Sun\'s Song speeds it up', ['adult'], 'q-receipt'],
+  ] as [string, string, string, string, string[], string | undefined][]).map(([id, area, name, where, needs, after]) =>
+    make('quest', id, area, name, where, needs, { ...adult, after })),
+
+  // Treasure chests the guides describe. This is NOT a complete list of the game's chests.
+  chest('c-mido', 'kokiri', "Mido's House: four chests", 'Northernmost house on the west side. Rupees', [], { sources: ['respec', 'game8'] }),
+  chest('c-deku-map', 'deku', 'Dungeon Map', 'Climb the vines in the lobby and follow the path round', [], { sources: ['respec', 'game8'] }),
+  chest('c-deku-compass', 'deku', 'Compass', 'Press the switch and jump across the gap', [], { sources: ['respec', 'game8'] }),
+  chest('c-deku-nuts', 'deku', 'Small chest: Deku Nuts', 'Behind the Compass chest, crawl through the gap', [], { sources: ['respec', 'game8'] }),
+  chest('c-deku-sticks', 'deku', 'Small chest: Deku Sticks', 'Lower level: press the switch to burn the web', [], { sources: ['respec', 'game8'] }),
+  chest('c-dodongo-map', 'dodongo', 'Dungeon Map', 'Main room: bomb flower on the north-west alcove rocks', ['bracelet'], { sources: ['respec', 'game8'] }),
+  chest('c-dodongo-compass', 'dodongo', 'Compass', 'West door, then blast the rock to the south', ['bracelet'], { sources: ['respec', 'game8'] }),
+  chest('c-dodongo-rupee', 'dodongo', 'Rupee chest', 'Appears after the Lizalfos fight', ['bracelet'], { sources: ['respec', 'game8'] }),
+  chest('c-goron-maze', 'goron', 'West room chests', 'Top tier: bomb into the west room and through its maze', ['bombs']),
+  chest('c-river-grotto', 'river', 'Grotto chest', 'Above the vines, in the corner grotto hidden in long grass', ['bombs'], { sources: ['respec', 'game8'] }),
+  chest('c-jabu-map', 'jabu', 'Dungeon Map', 'Press the switch to raise the water, then the nearby chest', ['bombs'], { sources: ['respec', 'game8'] }),
+  chest('c-jabu-compass', 'jabu', 'Compass', 'In one of the rooms along the long north corridor', ['boomerang'], { sources: ['respec', 'game8'] }),
+  chest('c-forest-map', 'forest', 'Dungeon Map', 'North-east courtyard: drain the well, then Hookshot up to the big chest', ['hookshot']),
+  chest('c-forest-compass', 'forest', 'Compass', 'Blue Poe staircase room: defeat the Poe', ['bow']),
+  chest('c-fire-map', 'fire', 'Dungeon Map', 'South of the rolling boulder maze', ['forestClear']),
+  chest('c-fire-compass', 'fire', 'Compass', 'Circular room: shoot the switch above the west door', ['forestClear']),
+  chest('c-fire-race', 'fire', 'Three Rupee chests', 'Hookshot race puzzle near the upper Gold Skulltula', ['scarecrow']),
+  chest('c-ice-map', 'ice', 'Dungeon Map', 'Melt the red ice around the chest with Blue Fire', ['bottle', 'hammer']),
+  chest('c-ice-compass', 'ice', 'Compass', 'East of the spinning blade room, behind red ice', ['bottle', 'hammer']),
+  chest('c-ice-rupee', 'ice', 'Rupee chest', 'Ice block room, west ledge: Song of Time makes a bridge', ['bottle', 'hammer']),
+  chest('c-water-map', 'water', 'Dungeon Map', 'East path on 1F underwater, follow the blue line up', ['ironBoots']),
+  chest('c-water-compass', 'water', 'Compass', "South of the central pillar: bomb the wall, swim through, beat the Like Like", ['ironBoots', 'bombs']),
+  chest('c-water-b1', 'water', 'Rupee chest', 'B1 room with the Gold Skulltula, water at green', ['ironBoots']),
+  chest('c-well-map', 'well', 'Dungeon Map', 'Below the Beamos room, behind the bombable rocks', ['longshot', 'bombs']),
+  chest('c-well-compass', 'well', 'Compass', 'Middle rooms: enter through the hidden hole in the outer wall', ['lens']),
+  chest('c-well-rupees', 'well', 'Rupee chests', 'North-west, south-west and the south crawlspace of the central room', ['lens']),
+  chest('c-shadow-map', 'shadow', 'Dungeon Map', 'North of the right-hand crypt room, past the ReDead', ['lens']),
+  chest('c-shadow-compass', 'shadow', 'Compass', 'Past the bombed east wall, through the false wall to the south', ['lens']),
+  chest('c-shadow-invisible', 'shadow', 'Invisible chest', 'In the Gold Skulltula room past the invisible scythe', ['lens']),
+  chest('c-spirit-map', 'spirit', 'Dungeon Map', "Light the unlit torch at the statue's foot with Din's Fire", ['requiem', 'dins']),
+  chest('c-spirit-compass', 'spirit', 'Compass', "North-west room: play Zelda's Lullaby, then Hookshot to the chest", ['silverGauntlets']),
+
+  // Story items: the game hands you these, so they only count on Progress.
+  ...([
+    ['story-sword', 'kokiri', 'Kokiri Sword', [], undefined],
+    ['story-deku-shield', 'kokiri', 'Deku Shield', [], undefined],
+    ['story-slingshot', 'deku', 'Fairy Slingshot', [], 'slingshot'],
+    ['story-heart-deku', 'deku', 'Heart Container: Deku Tree', ['slingshot'], undefined],
+    ['story-emerald', 'deku', 'Kokiri Emerald', ['slingshot'], 'dekuClear'],
+    ['story-fairy-ocarina', 'field', 'Fairy Ocarina', ['dekuClear'], 'ocarina'],
+    ['story-bracelet', 'goron', "Goron's Bracelet", ['saria'], 'bracelet'],
+    ['story-bombs', 'dodongo', 'Bomb Bag', ['bracelet'], 'bombs'],
+    ['story-heart-dodongo', 'dodongo', 'Heart Container: Dodongo Cavern', ['bombs'], undefined],
+    ['story-ruby', 'dodongo', "Goron's Ruby", ['bombs'], undefined],
+    ['story-boomerang', 'jabu', 'Boomerang', ['bombs'], 'boomerang'],
+    ['story-heart-jabu', 'jabu', "Heart Container: Jabu-Jabu's Belly", ['boomerang'], undefined],
+    ['story-sapphire', 'jabu', "Zora's Sapphire", ['boomerang'], undefined],
+    ['story-ocarina-time', 'market', 'Ocarina of Time', ['boomerang'], undefined],
+    ['story-master-sword', 'temple', 'Master Sword', ['songTime'], 'adult'],
+    ['story-light-medallion', 'temple', 'Light Medallion', ['adult'], undefined],
+    ['story-hookshot', 'graveyard', 'Hookshot', ['adult'], 'hookshot'],
+    ['story-bow', 'forest', 'Fairy Bow', ['hookshot'], 'bow'],
+    ['story-heart-forest', 'forest', 'Heart Container: Forest Temple', ['bow'], undefined],
+    ['story-forest-medallion', 'forest', 'Forest Medallion', ['bow'], 'forestClear'],
+    ['story-hammer', 'fire', 'Megaton Hammer', ['forestClear'], 'hammer'],
+    ['story-heart-fire', 'fire', 'Heart Container: Fire Temple', ['hammer'], undefined],
+    ['story-fire-medallion', 'fire', 'Fire Medallion', ['hammer'], undefined],
+    ['story-iron-boots', 'ice', 'Iron Boots', ['hammer'], 'ironBoots'],
+    ['story-longshot', 'water', 'Longshot', ['ironBoots'], 'longshot'],
+    ['story-heart-water', 'water', 'Heart Container: Water Temple', ['longshot'], undefined],
+    ['story-water-medallion', 'water', 'Water Medallion', ['longshot'], undefined],
+    ['story-lens', 'well', 'Lenses of Truth', ['longshot'], 'lens'],
+    ['story-hover', 'shadow', 'Hover Boots', ['lens'], undefined],
+    ['story-heart-shadow', 'shadow', 'Heart Container: Shadow Temple', ['lens'], undefined],
+    ['story-shadow-medallion', 'shadow', 'Shadow Medallion', ['lens'], undefined],
+    ['story-pass', 'fortress', 'Gerudo Pass', ['lens'], 'gerudoPass'],
+    ['story-silver-gauntlets', 'spirit', 'Silver Gauntlets', ['requiem'], 'silverGauntlets'],
+    ['story-mirror', 'spirit', 'Mirror Shield', ['silverGauntlets'], undefined],
+    ['story-heart-spirit', 'spirit', 'Heart Container: Spirit Temple', ['silverGauntlets'], undefined],
+    ['story-spirit-medallion', 'spirit', 'Spirit Medallion', ['silverGauntlets'], undefined],
+    ['story-light-arrows', 'temple', 'Light Arrows', ['silverGauntlets'], 'lightArrows'],
+    ['story-golden-gauntlets', 'ganon', 'Golden Gauntlets', ['lightArrows'], 'goldenGauntlets'],
+  ] as [string, string, string, string[], string | undefined][]).map(([id, area, name, needs, grants]) =>
+    make('story', id, area, name, '', needs, { quiet: true, grants })),
 ];

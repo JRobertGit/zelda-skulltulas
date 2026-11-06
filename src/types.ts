@@ -1,4 +1,4 @@
-export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward';
+export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward' | 'chest' | 'quest' | 'story';
 
 export type Age = 'child' | 'adult';
 
@@ -33,6 +33,10 @@ export interface Entry {
   night?: boolean;
   age?: Age;
   minTokens?: number;
+  /** Stays locked until this entry is collected, for quests done in order. */
+  after?: string;
+  /** Counted on Progress only. The story guarantees it, so it never prompts a warning. */
+  quiet?: boolean;
   /** Ability the player automatically has once this entry is ticked. */
   grants?: string;
   /** Set when guides disagree. Says what the disagreement is. */

@@ -232,7 +232,12 @@ function progressView(): string {
   const globals = lockoutsFor(null, state);
   const named = (kind: Kind) => ENTRIES.filter((e) => e.kind === kind && state.done.includes(e.id)).map((e) => e.name);
   const nameList = (names: string[]) => names.length ? `<ul class="names">${names.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
-  const others: [string, Kind[]][] = [['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Masks', ['mask']], ['Other items', ['reward', 'shield']]];
+  const others: [string, Kind[]][] = [['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Mask quest', ['mask']], ['Biggoron Sword quest', ['quest']], ['Other items', ['reward', 'shield']]];
+  const story = ENTRIES.filter((e) => e.kind === 'story');
+  const storyDone = story.filter((e) => state.done.includes(e.id));
+  const storyNow = story.filter((e) => statusOf(e, state) === 'now');
+  const chests = ENTRIES.filter((e) => e.kind === 'chest');
+  const chestsDone = chests.filter((e) => state.done.includes(e.id));
   const extras = EXTRAS.filter((x) => (x.after as readonly string[]).every((a) => state.owned.includes(a)));
   const owned = ABILITIES.filter((a) => state.owned.includes(a.id));
   return `<section class="panel flush">
@@ -267,6 +272,17 @@ function progressView(): string {
         <div class="bar"><i style="width:${all.length ? (got.length / all.length) * 100 : 0}%"></i></div>
         ${nameList(got.map((e) => e.name))}</div>`;
     }).join('')}
+    <div class="stat">
+      <header><h2>Known chests</h2><b>${chestsDone.length}<small>/${chests.length}</small></b></header>
+      <div class="bar"><i style="width:${chests.length ? (chestsDone.length / chests.length) * 100 : 0}%"></i></div>
+      <p class="muted quiz">No complete chest list exists yet, so this is only what guides describe. The game has more.</p>
+    </div>
+    <div class="stat">
+      <header><h2>Story items</h2><b>${storyDone.length}<small>/${story.length}</small></b></header>
+      <div class="bar"><i style="width:${(storyDone.length / story.length) * 100}%"></i></div>
+      ${storyNow.length ? `<p class="muted quiz">Tap any you have:</p>${storyNow.map((e) => `<button class="extra" data-action="done" data-id="${e.id}" data-key="st-${e.id}" aria-pressed="false"><span class="tick small">${ui.check}</span>${esc(e.name)}</button>`).join('')}` : ''}
+      ${storyDone.length ? `<details class="done-list"><summary>${storyDone.length} collected, tap to undo</summary>${storyDone.map((e) => `<button class="extra" data-action="done" data-id="${e.id}" data-key="st-${e.id}" aria-pressed="true"><span class="tick small">${ui.check}</span>${esc(e.name)}</button>`).join('')}</details>` : ''}
+    </div>
     <div class="stat">
       <header><h2>Extras</h2></header>
       ${extras.map((x) => `<button class="extra" data-action="extra-goal" data-id="${x.id}" data-key="x-${x.id}" aria-pressed="${state.extras.includes(x.id)}"><span class="tick small">${ui.check}</span>${esc(x.label)}</button>`).join('')}

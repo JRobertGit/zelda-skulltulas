@@ -72,9 +72,18 @@ describe('data integrity', () => {
   });
 
   it('makes everything collectable once every check is confirmed', () => {
-    const all = { ...freshState(), owned: ABILITIES.map((a) => a.id), extraTokens: 100 };
-    const stuck = ENTRIES.filter((e) => statusOf(e, all) !== 'now').map((e) => e.id);
-    expect(stuck).toEqual([]);
+    let all: State = { ...freshState(), owned: ABILITIES.map((a) => a.id), extraTokens: 100 };
+    let ticked = true;
+    while (ticked) {
+      ticked = false;
+      for (const e of ENTRIES) {
+        if (statusOf(e, all) === 'now') {
+          all = toggleDone(all, e.id);
+          ticked = true;
+        }
+      }
+    }
+    expect(ENTRIES.filter((e) => statusOf(e, all) !== 'done').map((e) => e.id)).toEqual([]);
     expect(revealedAreas(all)).toHaveLength(AREAS.length);
   });
 
@@ -158,6 +167,47 @@ describe('checks', () => {
   it('stops asking about an ability once you confirm it', () => {
     const state = toggleAbility(freshState(), 'slingshot');
     expect(checksFor('deku', state).map((a) => a.id)).not.toContain('slingshot');
+  });
+});
+
+describe('quests in order', () => {
+  it('unlocks each step only after the one before', () => {
+    let state = withOwned('adult');
+    expect(statusOf(entry('q-egg'), state)).toBe('now');
+    expect(statusOf(entry('q-cucco'), state)).toBe('blocked');
+    state = toggleDone(state, 'q-egg');
+    expect(statusOf(entry('q-cucco'), state)).toBe('now');
+  });
+
+  it('does not name a later mask until the earlier one is sold', () => {
+    const state = toggleDone(withOwned('bombs'), 'mask-keaton');
+    expect(availableIn('market', state).map((e) => e.id)).not.toContain('mask-skull');
+    expect(availableIn('kakariko', state).map((e) => e.id)).toContain('mask-keaton-sell');
+    const sold = toggleDone(state, 'mask-keaton-sell');
+    expect(availableIn('market', sold).map((e) => e.id)).toContain('mask-skull');
+  });
+
+  it('every step references an entry that exists', () => {
+    for (const e of ENTRIES) if (e.after) expect(entry(e.after), e.id).toBeDefined();
+  });
+});
+
+describe('story items', () => {
+  it('never prompt a warning, a route or a return trip', () => {
+    const state = withOwned('slingshot');
+    expect(availableIn('deku', state).map((e) => e.id)).not.toContain('story-emerald');
+    const away: State = { ...withOwned('slingshot'), visited: ['kokiri', 'deku'] };
+    expect(returnItems(away).map((e) => e.kind)).not.toContain('story');
+    expect(statusOf(entry('story-emerald'), state)).toBe('now');
+  });
+
+  it('count when you confirm the matching check', () => {
+    expect(toggleAbility(freshState(), 'bracelet').done).toContain('story-bracelet');
+  });
+
+  it('are filled in for older saves that already confirmed the check', () => {
+    const loaded = sanitize({ owned: ['dekuClear', 'saria'], done: [] });
+    expect(loaded.done).toEqual(expect.arrayContaining(['story-emerald', 'song-saria']));
   });
 });
 
@@ -314,8 +364,9 @@ describe('heading somewhere', () => {
     const areas = trips.map((t) => t.area);
     expect(areas).not.toContain('field');
     expect(areas).not.toContain('market');
-    expect(areas[0]).toBe('kakariko');
-    expect(areas).toContain('lonlon');
+    const values = trips.map((t) => t.items / t.steps);
+    expect(values).toEqual([...values].sort((a, b) => b - a));
+    expect(areas.indexOf('kakariko')).toBeLessThan(areas.indexOf('lonlon'));
   });
 
   it('says when an area needs a later visit anyway', () => {
@@ -386,12 +437,12 @@ describe('restoring saved data', () => {
     expect(state.current).toBe('kokiri');
     expect(state.visited).toEqual(['deku', 'kokiri']);
     expect(state.owned).toEqual(['slingshot']);
-    expect(state.done).toEqual(['gs-deku-switch']);
+    expect(state.done.sort()).toEqual(['gs-deku-switch', 'story-slingshot']);
     expect(state.extraTokens).toBe(100);
   });
 
   it('survives a save and restore round trip', () => {
-    const state = toggleDone(moveTo(withOwned('slingshot'), 'deku'), 'gs-deku-gate');
+    const state = toggleDone(moveTo(toggleAbility(freshState(), 'slingshot'), 'deku'), 'gs-deku-gate');
     expect(sanitize(JSON.parse(JSON.stringify(state)))).toEqual(state);
   });
 });

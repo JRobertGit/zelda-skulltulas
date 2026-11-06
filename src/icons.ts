@@ -76,6 +76,15 @@ const KIND_ICONS: Record<Kind, () => string> = {
   shield: () =>
     svg(`<path d="M16 3 L27 7 V15 C27 22 22 27 16 29 C10 27 5 22 5 15 V7 Z" fill="#2c4f9e" stroke="#c6d2ee" stroke-width="1.8"/>
     <path d="M16 8 L20 16 L16 24 L12 16 Z" fill="#c6d2ee"/>`),
+  chest: () =>
+    svg(`<path d="M4 14C4 8 8 6 16 6S28 8 28 14V26H4Z" fill="#7a5a33" stroke="#d6a65f" stroke-width="1.6"/>
+    <path d="M4 15H28" stroke="#d6a65f" stroke-width="2"/><rect x="13" y="12.5" width="6" height="7" rx="1" fill="#f2c14e"/>`),
+  quest: () =>
+    svg(`<path d="M6 8C13 3 19 3 26 8" fill="none" stroke="#6fd8d0" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M26 8V4M26 8H22M26 24C19 29 13 29 6 24M6 24V28M6 24H10" fill="none" stroke="#6fd8d0" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="4.5" fill="#6fd8d0"/>`),
+  story: () =>
+    svg(`<path d="M16 3L28 28H4Z" fill="#f2c14e" opacity=".85"/><path d="M16 15L10 28H22Z" fill="#12172b"/>`),
   mask: () =>
     svg(`<path d="M16 4C9 4 5 8 5 15C5 22 10 28 16 28C22 28 27 22 27 15C27 8 23 4 16 4Z" fill="#e8d3a8" stroke="#8c6b3f" stroke-width="1.6"/>
     <ellipse cx="11" cy="14" rx="3" ry="3.6" fill="#3b2a14"/><ellipse cx="21" cy="14" rx="3" ry="3.6" fill="#3b2a14"/>

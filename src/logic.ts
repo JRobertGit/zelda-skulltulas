@@ -62,13 +62,14 @@ export function tokenCount(state: State, entries: Entry[] = ENTRIES): number {
 export function statusOf(entry: Entry, state: State, entries: Entry[] = ENTRIES): Status {
   if (state.done.includes(entry.id)) return 'done';
   if (childLocked(entry, state)) return 'blocked';
+  if (entry.after && !state.done.includes(entry.after)) return 'blocked';
   const hasNeeds = requirements(entry).every((n) => state.owned.includes(n));
   const hasTokens = entry.minTokens === undefined || tokenCount(state, entries) >= entry.minTokens;
   return hasNeeds && hasTokens ? 'now' : 'blocked';
 }
 
 export function entriesIn(area: string, entries: Entry[] = ENTRIES): Entry[] {
-  return entries.filter((e) => e.area === area);
+  return entries.filter((e) => e.area === area && !e.quiet);
 }
 
 export function availableIn(area: string, state: State, entries: Entry[] = ENTRIES): Entry[] {
@@ -112,6 +113,7 @@ function shortestPath(from: string, to: string, state: State): string[] {
 export function returnItems(state: State, entries: Entry[] = ENTRIES): Entry[] {
   return entries.filter(
     (e) =>
+      !e.quiet &&
       e.area !== state.current &&
       state.visited.includes(e.area) &&
       statusOf(e, state, entries) === 'now',
@@ -299,14 +301,17 @@ export function sanitize(raw: unknown): State {
   const current =
     typeof data.current === 'string' && areaIds.has(data.current) ? data.current : base.current;
   const visited = pick(data.visited, areaIds);
+  const owned = pick(data.owned, abilityIds);
+  // Older saves confirmed checks before they were linked to collectibles.
+  const linked = ABILITIES.filter((a) => a.entry && owned.includes(a.id)).map((a) => a.entry as string);
   const extra = Number(data.extraTokens);
   return {
     version: 1,
     current,
     visited: visited.includes(current) ? visited : [...visited, current],
-    owned: pick(data.owned, abilityIds),
+    owned,
     notYet: pick(data.notYet, abilityIds),
-    done: pick(data.done, entryIds),
+    done: [...new Set([...pick(data.done, entryIds), ...linked])],
     skipped: pick(data.skipped, entryIds),
     flagged: pick(data.flagged, entryIds),
     extraTokens: Number.isFinite(extra) ? Math.min(100, Math.max(0, Math.floor(extra))) : 0,

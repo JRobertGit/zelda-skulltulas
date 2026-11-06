@@ -57,6 +57,7 @@ export const LOCKOUTS: Lockout[] = [
     area: 'kakariko',
     severity: 'recoverable',
     showAfter: ['longshot'],
+    hideIfDone: 'q-biggoron',
     title: 'The Biggoron Sword quest has timed legs',
     detail: "Odd Mushroom 4 minutes, Eyeball Frog 2:30, Eye Drops 3:30, and no Ocarina warps. If a timer runs out, you can get the item again and retry.",
     sources: ['rpgsite', 'respec'],
