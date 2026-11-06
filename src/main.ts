@@ -12,6 +12,7 @@ import {
   markNotYet,
   moveTo,
   neighbours,
+  nextQuestion,
   planTrip,
   routeAreas,
   routeStops,
@@ -27,6 +28,7 @@ import {
   toggleExtra,
   toggleFlag,
   waitingFor,
+  waitingGates,
 } from './logic';
 import { mapSvg } from './map';
 import { downloadBackup, load, readBackup, save } from './store';
@@ -100,7 +102,9 @@ function hereView(): string {
   const done = entries.filter((e) => statusOf(e, state) === 'done');
   const blocked = entries.filter((e) => statusOf(e, state) === 'blocked');
   const checks = checksFor(area.id, state);
-  const waiting = waitingFor(area.id, state);
+  const next = nextQuestion(state);
+  const areaChecks = checks.filter((a) => a.id !== next?.id);
+  const waiting = [...new Set([...waitingGates(state), ...waitingFor(area.id, state)])];
   const nearby = neighbours(area.id)
     .map((id) => ({ id, count: state.visited.includes(id) ? availableIn(id, state).length : 0 }))
     .filter((n) => n.count > 0);
@@ -112,17 +116,21 @@ function hereView(): string {
     <section class="panel">
       <header class="panel-head">
         <h2>${esc(area.name)}</h2>
-        <span class="count ${now.length ? 'hot' : ''}">${now.length ? `${now.length} to get` : checks.length ? 'Answer below' : 'Nothing yet'}</span>
+        <span class="count ${now.length ? 'hot' : ''}">${now.length ? `${now.length} to get` : areaChecks.length ? 'Answer below' : 'Nothing yet'}</span>
       </header>
+      ${next ? `<div class="next-step"><span class="checks-label">Next step: unlocks more of the map</span>
+        <div class="check-row"><span>${esc(next.label)}</span>
+          <button class="chip yes" data-action="own" data-id="${next.id}" data-key="o-${next.id}">Yes</button>
+          <button class="chip" data-action="not-yet" data-id="${next.id}" data-key="n-${next.id}">Not yet</button></div></div>` : ''}
       ${isHere ? '' : `<button class="im-here" data-action="arrive" data-id="${area.id}" data-key="arrive">${ui.foot}I'm here now</button>`}
       ${lockoutsFor(area.id, state).map(lockoutBanner).join('')}
-      ${checks.length ? `<div class="checks"><span class="checks-label">Do you have these yet?</span>
-        ${checks.map((a) => `<div class="check-row"><span>${esc(a.label)}</span>
+      ${areaChecks.length ? `<div class="checks"><span class="checks-label">Do you have these yet?</span>
+        ${areaChecks.map((a) => `<div class="check-row"><span>${esc(a.label)}</span>
           <button class="chip yes" data-action="own" data-id="${a.id}" data-key="o-${a.id}">Yes</button>
           <button class="chip" data-action="not-yet" data-id="${a.id}" data-key="n-${a.id}">Not yet</button></div>`).join('')}</div>` : ''}
       ${waiting.length ? `<div class="waiting"><span>Got it now?</span>${waiting.map((a) => `<button class="chip small" data-action="own" data-id="${a.id}" data-key="w-${a.id}">${esc(a.label)}</button>`).join('')}</div>` : ''}
       ${now.map(entryCard).join('')}
-      ${now.length === 0 && checks.length === 0 ? `<div class="empty">${ui.check}<p>Nothing to grab here right now.</p></div>` : ''}
+      ${now.length === 0 && areaChecks.length === 0 ? `<div class="empty">${ui.check}<p>Nothing to grab here right now.</p></div>` : ''}
       ${blocked.length ? `<p class="later">${ui.lock}More here later. You don't need to do anything yet.</p>` : ''}
       ${state.destination ? '' : nearby.map((n) => `<button class="nearby" data-action="go" data-id="${n.id}" data-key="n-${n.id}">${ui.foot}<span>Next door: <b>${esc(areaName(n.id))}</b> has ${n.count} ready</span></button>`).join('')}
       ${done.length ? `<details class="done-list"><summary>${done.length} collected here</summary>${done.map(entryCard).join('')}</details>` : ''}

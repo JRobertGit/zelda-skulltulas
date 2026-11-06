@@ -86,6 +86,29 @@ export function checksFor(area: string, state: State, entries: Entry[] = ENTRIES
   );
 }
 
+/** Checks that unlock further checks or areas, so missing one would stall the map. */
+function isGate(ability: Ability): boolean {
+  return (
+    ABILITIES.some((a) => a.askAfter.includes(ability.id)) ||
+    AREAS.some((a) => a.revealAfter.includes(ability.id))
+  );
+}
+
+const canAsk = (ability: Ability, state: State) =>
+  !state.owned.includes(ability.id) && hasAll(state, ability.askAfter);
+
+/** The next story check to confirm. It shows on every area, so the map can't get stuck. */
+export function nextQuestion(state: State): Ability | null {
+  return (
+    ABILITIES.find((a) => isGate(a) && canAsk(a, state) && !state.notYet.includes(a.id)) ?? null
+  );
+}
+
+/** Story checks answered "not yet". They stay offered everywhere for the same reason. */
+export function waitingGates(state: State): Ability[] {
+  return ABILITIES.filter((a) => isGate(a) && canAsk(a, state) && state.notYet.includes(a.id));
+}
+
 export function neighbours(area: string): string[] {
   return ROADS.flatMap(([a, b]) => (a === area ? [b] : b === area ? [a] : []));
 }

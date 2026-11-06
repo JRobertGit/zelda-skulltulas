@@ -11,6 +11,7 @@ import {
   markNotYet,
   moveTo,
   neighbours,
+  nextQuestion,
   planTrip,
   returnItems,
   revealedAreas,
@@ -25,6 +26,7 @@ import {
   toggleDetour,
   toggleDone,
   waitingFor,
+  waitingGates,
 } from '../src/logic';
 import type { Entry, State } from '../src/types';
 
@@ -208,6 +210,38 @@ describe('story items', () => {
   it('are filled in for older saves that already confirmed the check', () => {
     const loaded = sanitize({ owned: ['dekuClear', 'saria'], done: [] });
     expect(loaded.done).toEqual(expect.arrayContaining(['story-emerald', 'song-saria']));
+  });
+});
+
+describe('the next question', () => {
+  it('reveals every area by answering only the next question', () => {
+    let state = freshState();
+    const asked: string[] = [];
+    for (let question = nextQuestion(state); question; question = nextQuestion(state)) {
+      asked.push(question.id);
+      state = toggleAbility(state, question.id);
+    }
+    expect(asked[0]).toBe('dekuClear');
+    expect(revealedAreas(state)).toHaveLength(AREAS.length);
+  });
+
+  it('never names anything past the next step', () => {
+    expect(nextQuestion(freshState())?.id).toBe('dekuClear');
+    expect(nextQuestion(withOwned('dekuClear'))?.id).toBe('ocarina');
+    expect(nextQuestion(withOwned('dekuClear', 'ocarina'))?.id).toBe('lullaby');
+  });
+
+  it('keeps a not yet answer available so the map cannot get stuck', () => {
+    const state = markNotYet(freshState(), 'dekuClear');
+    expect(nextQuestion(state)).toBeNull();
+    expect(waitingGates(state).map((a) => a.id)).toEqual(['dekuClear']);
+    const answered = toggleAbility(state, 'dekuClear');
+    expect(waitingGates(answered)).toEqual([]);
+    expect(nextQuestion(answered)?.id).toBe('ocarina');
+  });
+
+  it('skips a question you already have', () => {
+    expect(nextQuestion(withOwned('dekuClear', 'ocarina', 'lullaby'))?.id).toBe('saria');
   });
 });
 
