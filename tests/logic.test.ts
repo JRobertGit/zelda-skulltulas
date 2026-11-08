@@ -111,6 +111,23 @@ describe('data integrity', () => {
     }
   });
 
+  it('lays out the map with no shared spots and no crossing roads', () => {
+    const spots = AREAS.map((a) => `${a.x},${a.y}`);
+    expect(new Set(spots).size).toBe(spots.length);
+    const at = (id: string) => AREAS.find((a) => a.id === id)!;
+    const side = (p: { x: number; y: number }, q: { x: number; y: number }, r: { x: number; y: number }) =>
+      Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    for (let i = 0; i < ROADS.length; i++) {
+      for (let j = i + 1; j < ROADS.length; j++) {
+        const [a, b] = ROADS[i].map(at);
+        const [c, d] = ROADS[j].map(at);
+        if (new Set([a, b, c, d]).size < 4) continue;
+        const crosses = side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
+        expect(crosses, `${ROADS[i]} crosses ${ROADS[j]}`).toBe(false);
+      }
+    }
+  });
+
   it('never lists more than the game totals', () => {
     const count = (kind: Entry['kind']) => ENTRIES.filter((e) => e.kind === kind).length;
     expect(count('skulltula')).toBeLessThanOrEqual(TOTALS.skulltula);

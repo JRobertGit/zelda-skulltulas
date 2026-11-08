@@ -1,44 +1,46 @@
 // SPOILERS: game data lives in src/data.
 import type { Ability, Area } from '../types';
 
-const COL = [50, 137, 224, 311];
-const row = (n: number) => 40 + n * 80;
+// Grid found by a layout search so that no road crosses another or passes
+// through an area. Columns are 80 apart, rows 86.
+const col = (n: number) => 40 + n * 80;
+const row = (n: number) => 40 + n * 86;
 
 /** The layout is a simplified diagram, not a real map of the game. */
 export const AREAS: Area[] = [
-  { id: 'fire', name: 'Fire Temple', x: COL[0], y: row(0), biome: 'dungeon', revealAfter: ['forestClear'] },
-  { id: 'crater', name: 'The Crater', x: COL[1], y: row(0), biome: 'grave', revealAfter: ['bombs'] },
-  { id: 'goron', name: 'Goron City', x: COL[2], y: row(0), biome: 'town', revealAfter: ['lullaby'] },
-  { id: 'dodongo', name: 'Dodongo Cavern', x: COL[3], y: row(0), biome: 'dungeon', revealAfter: ['bracelet'] },
-  { id: 'shadow', name: 'Shadow Temple', x: COL[0], y: row(1), biome: 'dungeon', revealAfter: ['lens'] },
-  { id: 'graveyard', name: 'Graveyard', x: COL[1], y: row(1), biome: 'grave', revealAfter: ['dekuClear'] },
-  { id: 'trail', name: 'Death Mtn Trail', x: COL[2], y: row(1), biome: 'grave', revealAfter: ['lullaby'] },
-  { id: 'domain', name: "Zora's Domain", x: COL[3], y: row(1), biome: 'water', revealAfter: ['bombs'] },
-  { id: 'well', name: 'The Well', x: COL[0], y: row(2), biome: 'dungeon', revealAfter: ['longshot'] },
-  { id: 'kakariko', name: 'Kakariko', x: COL[1], y: row(2), biome: 'village', revealAfter: ['dekuClear'] },
-  { id: 'river', name: "Zora's River", x: COL[2], y: row(2), biome: 'water', revealAfter: ['bombs'] },
-  { id: 'fountain', name: "Zora's Fountain", x: COL[3], y: row(2), biome: 'water', revealAfter: ['bombs'] },
-  { id: 'ganon', name: "Ganon's Castle", x: COL[0], y: row(3), biome: 'castle', revealAfter: ['lightArrows'] },
-  { id: 'castle', name: 'Hyrule Castle', x: COL[1], y: row(3), biome: 'castle', revealAfter: ['dekuClear'] },
-  { id: 'market', name: 'Market', x: COL[2], y: row(3), biome: 'town', revealAfter: ['dekuClear'] },
-  { id: 'jabu', name: "Jabu-Jabu's Belly", x: COL[3], y: row(3), biome: 'dungeon', revealAfter: ['bombs'] },
-  { id: 'valley', name: 'Gerudo Valley', x: COL[0], y: row(4), biome: 'field', revealAfter: ['boomerang'] },
-  { id: 'field', name: 'Hyrule Field', x: COL[1], y: row(4), biome: 'field', revealAfter: ['dekuClear'] },
-  { id: 'temple', name: 'Temple of Time', x: COL[2], y: row(4), biome: 'castle', revealAfter: ['boomerang'] },
-  { id: 'ice', name: 'Ice Cavern', x: COL[3], y: row(4), biome: 'dungeon', revealAfter: ['hammer'] },
-  { id: 'fortress', name: 'Gerudo Fortress', x: COL[0], y: row(5), biome: 'town', revealAfter: ['lens'] },
-  { id: 'lonlon', name: 'Lon Lon Ranch', x: COL[1], y: row(5), biome: 'ranch', revealAfter: ['dekuClear'] },
-  { id: 'kokiri', name: 'Kokiri Forest', x: COL[2], y: row(5), biome: 'forest', revealAfter: [] },
-  { id: 'deku', name: 'Deku Tree', x: COL[3], y: row(5), biome: 'dungeon', revealAfter: [] },
-  { id: 'training', name: 'Training Ground', x: COL[0], y: row(6), biome: 'dungeon', revealAfter: ['gerudoPass'] },
-  { id: 'lake', name: 'Lake Hylia', x: COL[1], y: row(6), biome: 'water', revealAfter: ['bombs'] },
-  { id: 'lostwoods', name: 'Lost Woods', x: COL[2], y: row(6), biome: 'forest', revealAfter: ['dekuClear'] },
-  { id: 'meadow', name: 'Forest Meadow', x: COL[3], y: row(6), biome: 'forest', revealAfter: ['lullaby'] },
-  { id: 'desert', name: 'Mirage Desert', x: COL[0], y: row(7), biome: 'field', revealAfter: ['gerudoPass'] },
-  { id: 'water', name: 'Water Temple', x: COL[1], y: row(7), biome: 'dungeon', revealAfter: ['ironBoots'] },
-  { id: 'forest', name: 'Forest Temple', x: COL[3], y: row(7), biome: 'dungeon', revealAfter: ['hookshot'] },
-  { id: 'colossus', name: 'Desert Colossus', x: COL[0], y: row(8), biome: 'field', revealAfter: ['gerudoPass'] },
-  { id: 'spirit', name: 'Spirit Temple', x: COL[1], y: row(8), biome: 'dungeon', revealAfter: ['requiem'] },
+  { id: 'fire', name: 'Fire Temple', x: col(2), y: row(0), biome: 'dungeon', revealAfter: ['forestClear'] },
+  { id: 'crater', name: 'The Crater', x: col(3), y: row(0), biome: 'grave', revealAfter: ['bombs'] },
+  { id: 'goron', name: 'Goron City', x: col(4), y: row(2), biome: 'town', revealAfter: ['lullaby'] },
+  { id: 'dodongo', name: 'Dodongo Cavern', x: col(4), y: row(1), biome: 'dungeon', revealAfter: ['bracelet'] },
+  { id: 'shadow', name: 'Shadow Temple', x: col(1), y: row(0), biome: 'dungeon', revealAfter: ['lens'] },
+  { id: 'graveyard', name: 'Graveyard', x: col(1), y: row(1), biome: 'grave', revealAfter: ['dekuClear'] },
+  { id: 'trail', name: 'Death Mtn Trail', x: col(3), y: row(1), biome: 'grave', revealAfter: ['lullaby'] },
+  { id: 'domain', name: "Zora's Domain", x: col(4), y: row(6), biome: 'water', revealAfter: ['bombs'] },
+  { id: 'well', name: 'The Well', x: col(1), y: row(2), biome: 'dungeon', revealAfter: ['longshot'] },
+  { id: 'kakariko', name: 'Kakariko', x: col(2), y: row(2), biome: 'village', revealAfter: ['dekuClear'] },
+  { id: 'river', name: "Zora's River", x: col(3), y: row(5), biome: 'water', revealAfter: ['bombs'] },
+  { id: 'fountain', name: "Zora's Fountain", x: col(3), y: row(7), biome: 'water', revealAfter: ['bombs'] },
+  { id: 'ganon', name: "Ganon's Castle", x: col(2), y: row(7), biome: 'castle', revealAfter: ['lightArrows'] },
+  { id: 'castle', name: 'Hyrule Castle', x: col(3), y: row(6), biome: 'castle', revealAfter: ['dekuClear'] },
+  { id: 'market', name: 'Market', x: col(2), y: row(5), biome: 'town', revealAfter: ['dekuClear'] },
+  { id: 'jabu', name: "Jabu-Jabu's Belly", x: col(4), y: row(7), biome: 'dungeon', revealAfter: ['bombs'] },
+  { id: 'valley', name: 'Gerudo Valley', x: col(1), y: row(5), biome: 'field', revealAfter: ['boomerang'] },
+  { id: 'field', name: 'Hyrule Field', x: col(2), y: row(4), biome: 'field', revealAfter: ['dekuClear'] },
+  { id: 'temple', name: 'Temple of Time', x: col(2), y: row(6), biome: 'castle', revealAfter: ['boomerang'] },
+  { id: 'ice', name: 'Ice Cavern', x: col(2), y: row(8), biome: 'dungeon', revealAfter: ['hammer'] },
+  { id: 'fortress', name: 'Gerudo Fortress', x: col(0), y: row(6), biome: 'town', revealAfter: ['lens'] },
+  { id: 'lonlon', name: 'Lon Lon Ranch', x: col(3), y: row(4), biome: 'ranch', revealAfter: ['dekuClear'] },
+  { id: 'kokiri', name: 'Kokiri Forest', x: col(1), y: row(4), biome: 'forest', revealAfter: [] },
+  { id: 'deku', name: 'Deku Tree', x: col(0), y: row(4), biome: 'dungeon', revealAfter: [] },
+  { id: 'training', name: 'Training Ground', x: col(1), y: row(7), biome: 'dungeon', revealAfter: ['gerudoPass'] },
+  { id: 'lake', name: 'Lake Hylia', x: col(3), y: row(3), biome: 'water', revealAfter: ['bombs'] },
+  { id: 'lostwoods', name: 'Lost Woods', x: col(1), y: row(3), biome: 'forest', revealAfter: ['dekuClear'] },
+  { id: 'meadow', name: 'Forest Meadow', x: col(0), y: row(3), biome: 'forest', revealAfter: ['lullaby'] },
+  { id: 'desert', name: 'Mirage Desert', x: col(0), y: row(7), biome: 'field', revealAfter: ['gerudoPass'] },
+  { id: 'water', name: 'Water Temple', x: col(4), y: row(3), biome: 'dungeon', revealAfter: ['ironBoots'] },
+  { id: 'forest', name: 'Forest Temple', x: col(0), y: row(2), biome: 'dungeon', revealAfter: ['hookshot'] },
+  { id: 'colossus', name: 'Desert Colossus', x: col(0), y: row(8), biome: 'field', revealAfter: ['gerudoPass'] },
+  { id: 'spirit', name: 'Spirit Temple', x: col(1), y: row(8), biome: 'dungeon', revealAfter: ['requiem'] },
 ];
 
 /**

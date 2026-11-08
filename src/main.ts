@@ -201,13 +201,13 @@ function destinationSheet(): string {
 
 function mapScreen(svg: string, overlay: string, hint: string): string {
   return `<div class="map-screen">
-    <div class="map-scroll">${svg}</div>
-    <p class="map-hint">${esc(hint)}</p>
-    <div class="map-tools">
-      <button class="map-btn" data-action="zoom" data-id="1" data-key="zoom-in" aria-label="Zoom in">+</button>
+    <div class="map-bar">
+      <p class="map-hint">${esc(hint)}</p>
       <button class="map-btn" data-action="zoom" data-id="-1" data-key="zoom-out" aria-label="Zoom out">−</button>
+      <button class="map-btn" data-action="zoom" data-id="1" data-key="zoom-in" aria-label="Zoom in">+</button>
       <button class="map-btn" data-action="recenter" data-key="recenter" aria-label="Show where you are">${ui.pin}</button>
     </div>
+    <div class="map-scroll">${svg}</div>
     ${overlay}
   </div>`;
 }
@@ -226,7 +226,7 @@ function mapView(): string {
         </div>
       </div>`
     : '';
-  const hint = state.destination ? `Gold line: your way to ${areaName(state.destination)}` : 'Drag to move, pinch or +/− to zoom';
+  const hint = state.destination ? `Gold line: your way to ${areaName(state.destination)}` : 'Drag to move, pinch to zoom';
   return mapScreen(mapSvg(state, { route, badges, selected: picked, zoom }), card, hint);
 }
 

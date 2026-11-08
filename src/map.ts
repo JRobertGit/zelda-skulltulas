@@ -15,6 +15,21 @@ const BIOME: Record<Area['biome'], { fill: string; glyph: string }> = {
 };
 
 
+/** Long names wrap onto two lines so neighbouring labels never touch. */
+function label2(name: string): string {
+  const words = name.split(' ');
+  if (name.length <= 11 || words.length < 2) {
+    return `<text class="label" y="36" text-anchor="middle">${name}</text>`;
+  }
+  let best = 1;
+  for (let i = 1; i < words.length; i++) {
+    const gap = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
+    const was = Math.abs(words.slice(0, best).join(' ').length - words.slice(best).join(' ').length);
+    if (gap < was) best = i;
+  }
+  return `<text class="label" text-anchor="middle"><tspan x="0" y="35">${words.slice(0, best).join(' ')}</tspan><tspan x="0" y="47">${words.slice(best).join(' ')}</tspan></text>`;
+}
+
 function ring(progress: number): string {
   const r = 21;
   const length = 2 * Math.PI * r;
@@ -43,14 +58,11 @@ export function mapSvg(state: State, options: MapOptions = {}): string {
   const shown = revealedAreas(state);
   const open = new Set(shown.map((a) => a.id));
   // Leave room for the soft glow around each area so it isn't clipped.
-  const top = Math.min(...shown.map((a) => a.y)) - 48;
-  const height = Math.max(...shown.map((a) => a.y)) + 64 - top;
-  const glows = shown
-    .map((a) => `<circle cx="${a.x}" cy="${a.y}" r="44" fill="${BIOME[a.biome].fill}" opacity=".24"/>`)
-    .join('');
+  const top = Math.min(...shown.map((a) => a.y)) - 34;
+  const height = Math.max(...shown.map((a) => a.y)) + 70 - top;
   const roads = ROADS.filter(([a, b]) => open.has(a) && open.has(b)).map(([a, b]) => {
     const [p, q] = [at(a), at(b)];
-    return `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#ffffff2e" stroke-width="3" stroke-dasharray="1 8" stroke-linecap="round"/>`;
+    return `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#ffffff26" stroke-width="2.5" stroke-dasharray="1 7" stroke-linecap="round"/>`;
   }).join('');
 
   const routeLine =
@@ -77,11 +89,11 @@ export function mapSvg(state: State, options: MapOptions = {}): string {
       ${ring(entries.length ? done / entries.length : 0)}
       ${now > 0 && badges.includes(area.id) ? `<g transform="translate(17 -17)"><circle r="10" fill="#f2c14e" stroke="#12172b" stroke-width="2"/><text class="badge" y="4" text-anchor="middle">${now}</text></g>` : ''}
       ${stop > 0 ? `<g transform="translate(-18 -17)"><circle r="9" fill="#12172b" stroke="#f2c14e" stroke-width="2"/><text class="stop" y="3.5" text-anchor="middle">${stop}</text></g>` : ''}
-      <text class="label" y="38" text-anchor="middle">${area.name}</text>
+      ${label2(area.name)}
     </g>`;
   }).join('');
 
-  return `<svg class="map" style="width:${Math.round(zoom * 100)}%" viewBox="0 ${top} 360 ${height}" role="group" aria-label="Map of areas">
-    ${glows}${roads}${routeLine}${nodes}
+  return `<svg class="map" style="width:${Math.round(zoom * 100)}%" viewBox="0 ${top} 400 ${height}" role="group" aria-label="Map of areas">
+    ${roads}${routeLine}${nodes}
   </svg>`;
 }

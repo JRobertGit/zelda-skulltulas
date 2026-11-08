@@ -39,12 +39,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Map */
 /* Full-screen map, used by the Map and Return trips tabs */
-.map-screen { position: fixed; inset: 0 0 calc(62px + env(safe-area-inset-bottom)) 0; z-index: 1; background: #101527; }
-.map-scroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.map { display: block; max-width: none; height: auto; margin: 0 auto; padding: 48px 0 40vh; user-select: none; }
-.map-hint { position: absolute; left: 12px; top: 12px; margin: 0; padding: 6px 10px; border-radius: 10px; background: #1a2140e6; color: var(--muted); font-size: 12px; pointer-events: none; }
-.map-tools { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 8px; }
-.map-btn { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: #1a2140; border: 1px solid #ffffff30; font-size: 22px; }
+.map-screen { position: fixed; inset: 0 0 calc(62px + env(safe-area-inset-bottom)) 0; z-index: 1; display: flex; flex-direction: column; background: #101527; }
+.map-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: #0d1122; border-bottom: 1px solid #ffffff1a; }
+.map-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.map { display: block; max-width: none; height: auto; margin: 0 auto; padding: 8px 0 40vh; user-select: none; }
+.map-hint { flex: 1; min-width: 0; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.25; }
+.map-btn { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #1a2140; border: 1px solid #ffffff30; font-size: 22px; }
 .map-btn .icon-sm { width: 22px; height: 22px; }
 .node.is-dim { opacity: .38; }
 .pick-card { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 14px; background: var(--panel); border: 1px solid #ffffff26; border-radius: 18px; box-shadow: 0 10px 30px #0008; }
@@ -70,7 +70,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .node { cursor: pointer; outline: none; }
 .node:focus-visible > circle:first-child { stroke: var(--gold); stroke-width: 2.5; }
 .node.is-unseen { opacity: .72; }
-.node .label { fill: var(--text); font-size: 10.5px; font-weight: 700; paint-order: stroke; stroke: #101527; stroke-width: 3.5px; }
+.node .label { fill: var(--text); font-size: 10.5px; letter-spacing: -.1px; font-weight: 700; paint-order: stroke; stroke: #101527; stroke-width: 3.5px; }
 .node .badge { fill: #12172b; font-size: 13px; font-weight: 800; }
 .node .stop { fill: var(--gold); font-size: 10.5px; font-weight: 800; }
 .glow { opacity: .28; animation: glow 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
