@@ -128,8 +128,9 @@ describe('what you can get now', () => {
   });
 
   it('requires every listed ability', () => {
-    expect(statusOf(entry('gs-field-grotto'), withOwned('bombs'))).toBe('blocked');
-    expect(statusOf(entry('gs-field-grotto'), withOwned('bombs', 'boomerang'))).toBe('now');
+    expect(statusOf(entry('gs-field-grotto'), withOwned('bombs', 'adult'))).toBe('blocked');
+    expect(statusOf(entry('gs-field-grotto'), withOwned('bombs', 'hookshot'))).toBe('blocked');
+    expect(statusOf(entry('gs-field-grotto'), withOwned('bombs', 'hookshot', 'adult'))).toBe('now');
   });
 
   it('marks ticked entries as done', () => {

@@ -1,8 +1,8 @@
 // SPOILERS: every location in the app lives here.
 //
 // Written from the full text of the RPG Site and Respec guides, which share an
-// author and numbering, and compared against Game8's separate Gold Skulltula
-// list. `disputed` records a real disagreement between them. Nothing here has
+// author and numbering. Gold Skulltulas are also compared against Game8, TheGamer
+// and Gaming Route. `disputed` records a real disagreement. Nothing here has
 // been checked in the game itself, so the app lets the player mark entries wrong.
 import type { Age, Entry, Kind, SourceId } from '../types';
 
@@ -24,7 +24,6 @@ const make = (kind: Kind, id: string, area: string, name: string, where: string,
   id, area, kind, name, where, needs, sources: o.sources ?? AUTHOR, ...o,
 });
 
-const NIGHT_DISPUTE = 'Guides disagree on whether this appears only at night.';
 const gs = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
   make('skulltula', id, area, 'Gold Skulltula', where, needs, { sources: BOTH, ...o });
 const hp = (id: string, area: string, where: string, needs: string[], o: Options = {}) =>
@@ -76,13 +75,13 @@ export const ENTRIES: Entry[] = [
 
   // Forest Meadow
   song('song-saria', 'meadow', "Saria's Song", 'Follow the music to the top of the meadow and talk to Saria', ['lullaby'], { ...child, grants: 'saria' }),
-  gs('gs-meadow', 'meadow', 'Halfway through the maze, up on the right-hand wall', ['hookshot'], { ...adultNight, disputed: 'One guide places this near the temple stairs instead of mid-maze.' }),
+  gs('gs-meadow', 'meadow', 'Climb the ladder onto the top of the maze, then Hookshot it', ['hookshot'], { ...adultNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Older guides place it on a wall halfway through the maze.' }),
   song('song-minuet', 'meadow', 'Minuet of Forest', 'Cutscene when you reach the meadow as an adult', ['hookshot'], adult),
 
   // Hyrule Field
-  gs('gs-field-tree', 'field', 'Near the Kokiri Forest road: roll into the lone tree at the end of the stream', ['dekuClear'], { ...childNight, disputed: NIGHT_DISPUTE }),
-  gs('gs-field-grotto', 'field', 'South woods, behind the ranch: bomb the crack, then use the Boomerang in the grotto', ['bombs', 'boomerang'], child),
-  gs('gs-field-crate', 'field', 'Hidden grotto in the western marshland: smash the crate', ['boomerang', 'dins'], child),
+  gs('gs-field-tree', 'field', 'West of the Kokiri Forest entrance: roll into the lone skinny tree where the stream ends', ['dekuClear'], { sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides disagree on when it appears: as a child at night, as an adult, or one tree for each.' }),
+  gs('gs-field-grotto', 'field', 'South woods between Lake Hylia and the ranch: bomb the crack by the rock wall, then Hookshot it in the grotto', ['bombs', 'hookshot'], { ...adult, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Changed in the remake. Older guides list it as a child; one says you clear a normal Skulltula there as a child first.' }),
+  gs('gs-field-crate', 'field', 'Wetland with shallow pools: bomb the grey cracked circle, drop in, break the crate', ['bombs'], { ...adult, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Changed in the remake. Guides place it in different parts of the field, and one says it works as a child too.' }),
   hp('hp-field-chest', 'field', 'Red-rock outcrop near the Gerudo side. As an adult read the Fairy Note, then open the chest as a child', ['adult', 'forestClear'], child),
   hp('hp-field-shop', 'field', 'Grotto by the single tree beside the castle-side moat. Read the note as an adult, give the password as a child, pay 100 Rupees', ['adult', 'forestClear', 'bombs'], child),
   item('quest-poes', 'field', 'Big Poes (all ten)', 'Jump Epona over the glowing purple lanterns, shoot them, bottle them, sell at the Market Poe Shop', ['epona', 'bow', 'bottle'], adult),
@@ -109,8 +108,8 @@ export const ENTRIES: Entry[] = [
   mask('mask-bunny-sell', 'field', 'Bunny Hood: sell', 'To the running man. He often passes the Market gate early in the day. Pay the shop afterwards', ['bombs'], { after: 'mask-bunny' }),
 
   // Hyrule Castle
-  gs('gs-castle-tree', 'castle', 'Before climbing the vine to the castle, look right behind the wall: roll into the tree', ['dekuClear'], { ...childNight, disputed: 'Guides differ on the exact tree and on whether it needs night.' }),
-  gs('gs-castle-grotto', 'castle', "Where you found Talon asleep: tree in the corner facing the town. Play the Song of Storms to open the grotto", ['storms', 'forestClear'], child),
+  gs('gs-castle-tree', 'castle', 'First courtyard past the guards: roll into the tree on the right, at the end by the vine wall', ['dekuClear'], { ...child, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides disagree on whether it needs night.' }),
+  gs('gs-castle-grotto', 'castle', "Where you woke Talon: play the Song of Storms by the flat three-leaf plant behind the tree, drop in, bomb the walls, use the Boomerang", ['storms', 'forestClear', 'bombs', 'boomerang'], { ...child, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
   fairy('fairy-castle', 'castle', 'Spin Attack', "Just past the gate: bomb the cracked wall, play Zelda's Lullaby, pay 50 Rupees", ['bombs', 'lullaby'], child),
   song('song-lullaby', 'castle', "Zelda's Lullaby", 'After the scenes in the castle courtyard', ['ocarina'], { ...child, grants: 'lullaby' }),
 
@@ -125,7 +124,7 @@ export const ENTRIES: Entry[] = [
   // Lon Lon Ranch
   gs('gs-ranch-tree', 'lonlon', 'Behind the Cucco Search building: roll into the two trees', ['dekuClear'], child),
   gs('gs-ranch-house', 'lonlon', 'On the ranch house window: use the Boomerang', ['boomerang'], childNight),
-  gs('gs-ranch-tower', 'lonlon', 'Inside the south-west silo building: use the Boomerang', ['boomerang'], { ...child, disputed: NIGHT_DISPUTE }),
+  gs('gs-ranch-tower', 'lonlon', 'Inside the ruined tower in the south-west: look up at the vines, use the Boomerang', ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: "One guide doesn't list this Skulltula at all." }),
   hp('hp-ranch-silo', 'lonlon', 'South-west silo building: move the blocks and crawl through the gap', ['dekuClear'], child),
   bottle('bottle-ranch', 'lonlon', 'Win the Super Cucco game, first door on the left as you enter', ['dekuClear'], child),
   song('song-epona', 'lonlon', "Epona's Song", 'Take out your Ocarina in front of Malon in the paddock', ['ocarina'], child),
@@ -136,7 +135,7 @@ export const ENTRIES: Entry[] = [
   gs('gs-kak-nw', 'kakariko', 'Behind the north-western house', ['dekuClear'], childNight),
   gs('gs-kak-door', 'kakariko', 'Beside the door of the House of Skulltula', ['dekuClear'], childNight),
   gs('gs-kak-site', 'kakariko', 'Building site: climb the scaffold', ['dekuClear'], childNight),
-  gs('gs-kak-tree', 'kakariko', 'Roll into the tree in the village', ['dekuClear'], { ...childNight, disputed: 'Guides differ: middle of town at night, or near the entrance at any time.' }),
+  gs('gs-kak-tree', 'kakariko', "Near the entrance by the foreman's son: roll into the tree", ['dekuClear'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
   gs('gs-kak-roof', 'kakariko', 'Southernmost house: Hookshot the vines to its roof and look behind it', ['hookshot'], adultNight),
   hp('hp-kak-roof', 'kakariko', 'Use a Cucco to clear the fence at the Windmill, climb the ladder, then glide to the blue roof and talk to the man', ['dekuClear'], child),
   hp('hp-kak-owl', 'kakariko', 'Ride the owl from the mountain peak, then drop south onto the next roof', ['bombs'], child),
@@ -154,7 +153,7 @@ export const ENTRIES: Entry[] = [
 
   // Graveyard
   gs('gs-grave-soil', 'graveyard', 'Soft soil in the north-west: release a bottled bug', ['dekuClear', 'bottle'], child),
-  gs('gs-grave-wall', 'graveyard', "Behind Dampe's hut: use the Boomerang", ['boomerang'], { ...childNight, disputed: NIGHT_DISPUTE }),
+  gs('gs-grave-wall', 'graveyard', "Behind Dampe's hut, on the right by the fence: use the Boomerang", ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
   hp('hp-grave-dig', 'graveyard', "Dampe's Gravedigging Tour: random. Pay extra when he says it's something hard", ['dekuClear'], childNight),
   hp('hp-grave-pull', 'graveyard', 'Pull open the right-most normal grave facing the big tomb, then drop in', ['dekuClear'], childNight),
   hp('hp-grave-bean', 'graveyard', 'Ride the bean plant you planted as a child, in the north', ['beans'], adult),
@@ -207,8 +206,8 @@ export const ENTRIES: Entry[] = [
   gs('gs-fire-hammer', 'fire', 'First room, right side of the lower floor: smash through, then smash the stones', ['hammer'], adult),
 
   // Zora's River
-  gs('gs-river-soil', 'river', 'Soft soil by the bean seller: release a bug', ['bombs', 'bottle'], child),
-  gs('gs-river-rock', 'river', 'Near the Lullaby symbol, go down to the rocks below. On the back of one', ['bombs'], { ...child, disputed: 'Guides disagree on the spot: back of the lower rocks, or a wall behind the vines.' }),
+  gs('gs-river-soil', 'river', 'New in the remake: soft soil right next to the bean seller. Release a bug', ['bombs', 'bottle'], { ...child, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
+  gs('gs-river-rock', 'river', 'Top end of the river: drop to the lowest level, behind the stone column holding up the bridge', ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides disagree on whether it needs night and the Boomerang.' }),
   gs('gs-river-adult-a', 'river', 'Raised section with the Gossip Stone, heading back toward the field', ['hookshot', 'beans'], adultNight),
   gs('gs-river-adult-b', 'river', 'Last corner of the river: turn around and look high up', ['hookshot'], adultNight),
   hp('hp-river-grotto', 'river', 'Carry a Cucco over the gap, climb the vines, take the Cucco in the grotto and flutter to the ledge', ['bombs'], child),
@@ -224,7 +223,7 @@ export const ENTRIES: Entry[] = [
 
   // Zora's Fountain
   gs('gs-fountain-tree', 'fountain', 'South-east island: roll into the trees', ['bombs'], child),
-  gs('gs-fountain-night', 'fountain', 'Right of Jabu-Jabu: use the Boomerang', ['boomerang'], { ...childNight, disputed: 'Guides disagree on the spot: right of Jabu-Jabu, or the log to its south-west.' }),
+  gs('gs-fountain-night', 'fountain', 'Southern wall, high up across from the sunken arch: use the Boomerang', ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'One guide places it to the right of Jabu-Jabu instead.' }),
   gs('gs-fountain-cave', 'fountain', 'Lift the huge rock next to the Fairy Fountain and go through the cave', ['silverGauntlets', 'lens'], adultNight),
   hp('hp-fountain-ice', 'fountain', 'Hop east across the ice blocks', ['hookshot'], adult),
   hp('hp-fountain-floor', 'fountain', 'Sink to the floor with the Iron Boots after leaving the Ice Cavern', ['ironBoots'], adult),
@@ -286,7 +285,7 @@ export const ENTRIES: Entry[] = [
   hp('hp-valley-nook', 'valley', 'Past the cow, climb the stairs by the waterfall to the hidden area', ['boomerang'], child),
 
   // Gerudo Fortress
-  gs('gs-fortress-wall', 'fortress', 'Far east door, outside: on the wall to your right', ['lens'], adultNight),
+  gs('gs-fortress-wall', 'fortress', 'Outer wall in a small gap by a door: Hookshot it', ['lens'], { ...adultNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides place it on the west side, the far east side, or the top of the fortress.' }),
   gs('gs-fortress-target', 'fortress', 'Horseback Archery range: back of the north-eastern target', ['gerudoPass'], { ...adultNight, disputed: 'Guides differ on which target it is.' }),
   hp('hp-fortress-chest', 'fortress', 'Inside, climb the ladder by your old cell, then Hookshot east to the chest', ['gerudoPass'], adult),
   hp('hp-fortress-archery', 'fortress', 'Horseback Archery: 1000 points', ['gerudoPass', 'epona', 'bow'], adult),

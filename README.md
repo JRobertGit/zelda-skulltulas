@@ -32,4 +32,4 @@ Then open `http://<computer-name>.local:4173` from a device on the same Wi-Fi. F
 
 ## Data
 
-Entries are compared across early community guides, because the game launched on 2026-11-05. Where guides disagree, `disputed` records it and the app shows it. All text and art are original to this project.
+Gold Skulltulas are compared across RPG Site and Respec (one author), Game8, TheGamer and Gaming Route (which combines Nintendo Life and VGC). Other entries are compared across early community guides, because the game launched on 2026-11-05. Where guides disagree, `disputed` records it and the app shows it. All text and art are original to this project.

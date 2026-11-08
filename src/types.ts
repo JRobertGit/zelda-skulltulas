@@ -2,7 +2,7 @@ export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fair
 
 export type Age = 'child' | 'adult';
 
-export type SourceId = 'rpgsite' | 'respec' | 'game8' | 'nintendo';
+export type SourceId = 'rpgsite' | 'respec' | 'game8' | 'nintendo' | 'thegamer' | 'gamingroute';
 
 export interface Area {
   id: string;

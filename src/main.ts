@@ -70,7 +70,7 @@ function entryCard(entry: Entry): string {
       <h3>${esc(entry.name)}
         ${entry.night ? `<span class="pill night">${ui.moon}Night</span>` : ''}
         ${entry.age && state.owned.includes('adult') ? `<span class="pill age">${entry.age === 'child' ? 'Child' : 'Adult'}</span>` : ''}
-        ${entry.sources.includes('game8') || entry.disputed ? '' : '<span class="pill single">One guide</span>'}
+        ${entry.sources.some((x) => x !== 'rpgsite' && x !== 'respec') || entry.disputed ? '' : '<span class="pill single">One guide</span>'}
         ${state.skipped.includes(entry.id) && !done ? '<span class="pill skipped">Skipped</span>' : ''}
       </h3>
       <p>${esc(entry.where)}</p>
