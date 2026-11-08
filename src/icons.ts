@@ -108,6 +108,7 @@ export const ui = {
   warn: line('<path d="M12 3 2 21h20Z"/><path d="M12 10v5M12 18v.1"/>'),
   flag: line('<path d="M5 22V4c5-3 9 3 14 0v10c-5 3-9-3-14 0"/>'),
   query: line('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.1"/>'),
+  pin: line('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>'),
   map: line('<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/>'),
   route: line('<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>'),
   chart: line('<path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M16 3.5A8 8 0 0 1 20.5 8H16Z" fill="currentColor"/>'),

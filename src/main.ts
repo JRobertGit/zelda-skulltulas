@@ -35,7 +35,7 @@ import { mapSvg } from './map';
 import { downloadBackup, load, readBackup, save } from './store';
 import type { Entry, Kind, Lockout, State } from './types';
 
-type Tab = 'here' | 'trips' | 'progress';
+type Tab = 'here' | 'map' | 'trips' | 'progress';
 
 let state: State = load();
 let tab: Tab = 'here';
@@ -43,6 +43,14 @@ let leavingTo: string | null = null;
 /** An area being looked at. Looking never counts as moving there. */
 let viewing: string | null = null;
 let choosingDestination = false;
+/** Area tapped on the map, shown in a small card. */
+let picked: string | null = null;
+let zoom = 1;
+let sheetOpen = false;
+/** Set when the map should jump to the area in focus on the next render. */
+let recenter = true;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
 let confirmingReset = false;
 let openDetail: string | null = null;
 let saveFailed = false;
@@ -106,19 +114,18 @@ function hereView(): string {
   const next = nextQuestion(state);
   const areaChecks = checks.filter((a) => a.id !== next?.id);
   const waiting = [...new Set([...waitingGates(state), ...waitingFor(area.id, state)])];
-  const nearby = neighbours(area.id)
-    .map((id) => ({ id, count: state.visited.includes(id) ? availableIn(id, state).length : 0 }))
-    .filter((n) => n.count > 0);
+  const shown = new Set(revealedAreas(state).map((a) => a.id));
+  const doors = neighbours(area.id)
+    .filter((id) => shown.has(id))
+    .map((id) => ({ id, count: state.visited.includes(id) ? availableIn(id, state).length : 0 }));
 
-  const route = routeAreas(state);
-
-  return `${mapSvg(state, route, [...new Set([...route, area.id])], area.id)}
-    ${headingBar()}
+  return `${headingBar()}
     <section class="panel">
       <header class="panel-head">
-        <h2>${esc(area.name)}</h2>
+        <div class="where"><span>${isHere ? "You're in" : 'Looking at'}</span><h2>${esc(area.name)}</h2></div>
         <span class="count ${now.length ? 'hot' : ''}">${now.length ? `${now.length} to get` : areaChecks.length ? 'Answer below' : 'Nothing yet'}</span>
       </header>
+      ${doors.length ? `<div class="doors"><span>Next door</span>${doors.map((d) => `<button class="door" data-action="go" data-id="${d.id}" data-key="door-${d.id}">${esc(areaName(d.id))}${d.count ? `<em>${d.count}</em>` : ''}</button>`).join('')}</div>` : ''}
       ${next ? `<div class="next-step"><span class="checks-label">Next step: unlocks more of the map</span>
         <div class="check-row"><span>${esc(next.label)}</span>
           <button class="chip yes" data-action="own" data-id="${next.id}" data-key="o-${next.id}">Yes</button>
@@ -133,7 +140,6 @@ function hereView(): string {
       ${now.map(entryCard).join('')}
       ${now.length === 0 && areaChecks.length === 0 ? `<div class="empty">${ui.check}<p>Nothing to grab here right now.</p></div>` : ''}
       ${blocked.length ? `<p class="later">${ui.lock}More here later. You don't need to do anything yet.</p>` : ''}
-      ${state.destination ? '' : nearby.map((n) => `<button class="nearby" data-action="go" data-id="${n.id}" data-key="n-${n.id}">${ui.foot}<span>Next door: <b>${esc(areaName(n.id))}</b> has ${n.count} ready</span></button>`).join('')}
       ${done.length ? `<details class="done-list"><summary>${done.length} collected here</summary>${done.map(entryCard).join('')}</details>` : ''}
     </section>
     ${onTheWay()}`;
@@ -171,7 +177,7 @@ function onTheWay(): string {
         </div>
         <button class="btn ${trip.added ? '' : 'primary'}" data-action="detour" data-id="${trip.area}" data-key="dt-${trip.area}" aria-pressed="${trip.added}">${trip.added ? 'Remove' : 'Add'}</button>
       </article>`).join('')}` : ''}
-    <p class="muted way-note">Tap an area on the map to look at it, then I'm here now when you arrive.</p>
+    <p class="muted way-note">Look at an area from the Map tab or Next door, then tap I'm here now when you arrive.</p>
   </section>`;
 }
 
@@ -191,6 +197,39 @@ function destinationSheet(): string {
   </div>`;
 }
 
+// Map tab
+
+function mapScreen(svg: string, overlay: string, hint: string): string {
+  return `<div class="map-screen">
+    <div class="map-scroll">${svg}</div>
+    <p class="map-hint">${esc(hint)}</p>
+    <div class="map-tools">
+      <button class="map-btn" data-action="zoom" data-id="1" data-key="zoom-in" aria-label="Zoom in">+</button>
+      <button class="map-btn" data-action="zoom" data-id="-1" data-key="zoom-out" aria-label="Zoom out">−</button>
+      <button class="map-btn" data-action="recenter" data-key="recenter" aria-label="Show where you are">${ui.pin}</button>
+    </div>
+    ${overlay}
+  </div>`;
+}
+
+function mapView(): string {
+  const route = state.destination ? routeAreas(state) : [];
+  const badges = [...new Set([...state.visited, ...route])];
+  const area = picked ? AREAS.find((a) => a.id === picked) : null;
+  const count = area ? availableIn(area.id, state).length : 0;
+  const card = area
+    ? `<div class="pick-card">
+        <div class="pick-head"><strong>${esc(area.name)}</strong><span>${area.id === state.current ? "You're here" : count ? `${count} to get` : 'Nothing yet'}</span></div>
+        <div class="pick-actions">
+          <button class="btn" data-action="go" data-id="${area.id}" data-key="pick-look">See its list</button>
+          ${area.id === state.current ? '' : `<button class="btn primary" data-action="arrive" data-id="${area.id}" data-key="pick-arrive">I'm here now</button>`}
+        </div>
+      </div>`
+    : '';
+  const hint = state.destination ? `Gold line: your way to ${areaName(state.destination)}` : 'Drag to move, pinch or +/− to zoom';
+  return mapScreen(mapSvg(state, { route, badges, selected: picked, zoom }), card, hint);
+}
+
 // Return trips tab
 
 function tripsView(): string {
@@ -198,14 +237,17 @@ function tripsView(): string {
   const trip = planTrip(state);
   const route = [state.current, ...trip.map((s) => s.area)];
   if (items.length === 0) {
-    return `${mapSvg(state)}<section class="panel"><div class="empty big">${ui.check}<h2>No return trips</h2><p>Nothing is waiting in places you've been.</p></div></section>`;
+    return mapScreen(mapSvg(state, { zoom }), `<div class="trip-sheet small"><div class="empty big">${ui.check}<h2>No return trips</h2><p>Nothing is waiting in places you've been.</p></div></div>`, 'Nothing to go back for');
   }
   const headline = isTripWorthwhile(state)
     ? `<span class="count hot">Worth a trip</span>`
     : `<span class="count">Can wait</span>`;
-  return `${mapSvg(state, route)}
-    <section class="panel">
-      <header class="panel-head"><h2>${items.length} waiting</h2>${headline}</header>
+  const stops = trip.filter((s) => s.entries.length).length;
+  const sheet = `<section class="trip-sheet ${sheetOpen ? 'open' : ''}">
+      <button class="sheet-grip" data-action="sheet" data-key="sheet" aria-expanded="${sheetOpen}">
+        <i></i><span class="panel-head"><h2>${items.length} waiting · ${stops} ${stops === 1 ? 'stop' : 'stops'}</h2>${headline}</span>
+      </button>
+      <div class="sheet-body">
       <ol class="route">
         ${trip.map((stop, index) => {
           const entries = stop.entries.map((id) => ENTRIES.find((e) => e.id === id)!);
@@ -217,7 +259,9 @@ function tripsView(): string {
           </li>`;
         }).join('')}
       </ol>
+      </div>
     </section>`;
+  return mapScreen(mapSvg(state, { route, dimOffRoute: true, zoom }), sheet, 'Gold line: your return route');
 }
 
 // Progress tab
@@ -351,7 +395,9 @@ function leaveSheet(): string {
 function render(): void {
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key;
   const trips = returnItems(state).length;
-  const views = { here: hereView, trips: tripsView, progress: progressView };
+  const views = { here: hereView, map: mapView, trips: tripsView, progress: progressView };
+  const scroller = root.querySelector<HTMLElement>('.map-scroll');
+  const kept = scroller ? [scroller.scrollLeft, scroller.scrollTop] : null;
   const tabButton = (id: Tab, icon: string, label: string, badge = 0) =>
     `<button class="tab ${tab === id ? 'on' : ''}" data-action="tab" data-id="${id}" data-key="tab-${id}" ${tab === id ? 'aria-current="page"' : ''}>
       ${icon}<span>${label}</span>${badge ? `<em>${badge}</em>` : ''}
@@ -360,13 +406,20 @@ function render(): void {
     ${saveFailed ? `<p class="save-warning" role="alert">This browser isn't saving your progress. Back up from Progress before closing.</p>` : ''}
     <main>${views[tab]()}</main>
     <nav class="tabs">
-      ${tabButton('here', ui.map, 'Here')}
+      ${tabButton('here', ui.pin, 'Here')}
+      ${tabButton('map', ui.map, 'Map')}
       ${tabButton('trips', ui.route, 'Return trips', trips)}
       ${tabButton('progress', ui.chart, 'Progress')}
     </nav>
     ${leaveSheet()}
     ${destinationSheet()}`;
-  centerMap();
+  const map = root.querySelector<HTMLElement>('.map-scroll');
+  if (map && (recenter || !kept)) {
+    centerMap();
+    recenter = false;
+  } else if (map && kept) {
+    [map.scrollLeft, map.scrollTop] = kept;
+  }
   if (leavingTo) {
     root.querySelector<HTMLElement>('[data-key="stay"]')?.focus();
   } else if (focusKey) {
@@ -374,13 +427,19 @@ function render(): void {
   }
 }
 
-/** The map scrolls inside its own frame, so keep the area in focus visible. */
+/** Scrolls the map so the area in focus sits in the middle of the screen. */
 function centerMap(): void {
-  const wrap = root.querySelector<HTMLElement>('.map-wrap');
-  const node = wrap?.querySelector(`.node[data-id="${viewing ?? state.current}"]`);
+  const wrap = root.querySelector<HTMLElement>('.map-scroll');
+  const node = wrap?.querySelector(`.node[data-id="${picked ?? viewing ?? state.current}"]`);
   if (!wrap || !node) return;
-  const offset = node.getBoundingClientRect().top - wrap.getBoundingClientRect().top;
-  wrap.scrollTop = wrap.scrollTop + offset - wrap.clientHeight / 2 + 20;
+  const box = node.getBoundingClientRect();
+  const frame = wrap.getBoundingClientRect();
+  wrap.scrollLeft += box.left + box.width / 2 - frame.left - wrap.clientWidth / 2;
+  wrap.scrollTop += box.top + box.height / 2 - frame.top - wrap.clientHeight / 2;
+}
+
+function setZoom(next: number): void {
+  zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
 }
 
 function arrive(area: string): void {
@@ -400,13 +459,34 @@ function arrive(area: string): void {
 function handle(action: string, id: string | undefined): void {
   switch (action) {
     case 'go':
-      // Tapping the map only looks at an area.
+      // Looking at an area never counts as moving there.
       tab = 'here';
+      picked = null;
       viewing = id === state.current ? null : (id ?? null);
       render();
       window.scrollTo(0, 0);
       break;
+    case 'pick':
+      picked = picked === id ? null : (id ?? null);
+      render();
+      break;
+    case 'zoom':
+      setZoom(zoom + Number(id) * 0.5);
+      recenter = true;
+      render();
+      break;
+    case 'recenter':
+      picked = null;
+      viewing = null;
+      recenter = true;
+      render();
+      break;
+    case 'sheet':
+      sheetOpen = !sheetOpen;
+      render();
+      break;
     case 'arrive':
+      picked = null;
       if (id) arrive(id);
       break;
     case 'not-yet':
@@ -421,6 +501,8 @@ function handle(action: string, id: string | undefined): void {
     case 'tab':
       tab = id as Tab;
       notice = '';
+      picked = null;
+      recenter = true;
       render();
       window.scrollTo(0, 0);
       break;
@@ -506,6 +588,31 @@ root.addEventListener('keydown', (event) => {
     event.preventDefault();
     handle(el.dataset.action!, el.dataset.id);
   }
+});
+
+// Pinch to zoom the map. The width changes live, and the zoom is kept on release.
+let pinch: { start: number; zoom: number } | null = null;
+const spread = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+root.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 2 && (event.target as Element).closest('.map-scroll')) {
+    pinch = { start: spread(event.touches), zoom };
+  }
+}, { passive: true });
+root.addEventListener('touchmove', (event) => {
+  if (!pinch || event.touches.length !== 2) return;
+  event.preventDefault();
+  const wrap = root.querySelector<HTMLElement>('.map-scroll');
+  const svg = wrap?.querySelector<SVGElement>('.map');
+  if (!wrap || !svg) return;
+  const before = zoom;
+  setZoom(pinch.zoom * (spread(event.touches) / pinch.start));
+  const ratio = zoom / before;
+  svg.style.width = `${Math.round(zoom * 100)}%`;
+  wrap.scrollLeft = (wrap.scrollLeft + wrap.clientWidth / 2) * ratio - wrap.clientWidth / 2;
+  wrap.scrollTop = (wrap.scrollTop + wrap.clientHeight / 2) * ratio - wrap.clientHeight / 2;
+}, { passive: false });
+root.addEventListener('touchend', () => {
+  pinch = null;
 });
 
 root.addEventListener('change', async (event) => {

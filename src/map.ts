@@ -24,13 +24,27 @@ function ring(progress: number): string {
       stroke-dasharray="${length * progress} ${length}" transform="rotate(-90)"/>`;
 }
 
-/** Badges appear only on `badges`, so the map shows what matters instead of everything possible. */
-export function mapSvg(state: State, route: string[] = [], badges: string[] = route, viewing: string = state.current): string {
+interface MapOptions {
+  route?: string[];
+  /** Areas that show an "available now" count. Others stay quiet. */
+  badges?: string[];
+  /** Area outlined as selected. */
+  selected?: string | null;
+  /** Fade areas that the route doesn't touch. */
+  dimOffRoute?: boolean;
+  /** Width as a percentage of the screen, for zooming. */
+  zoom?: number;
+}
+
+/** The map as an SVG. Tapping an area sends the "pick" action. */
+export function mapSvg(state: State, options: MapOptions = {}): string {
+  const { route = [], badges = route, selected = null, dimOffRoute = false, zoom = 1 } = options;
   const at = (id: string) => AREAS.find((a) => a.id === id)!;
   const shown = revealedAreas(state);
   const open = new Set(shown.map((a) => a.id));
-  const top = Math.min(...shown.map((a) => a.y)) - 40;
-  const height = Math.max(...shown.map((a) => a.y)) + 62 - top;
+  // Leave room for the soft glow around each area so it isn't clipped.
+  const top = Math.min(...shown.map((a) => a.y)) - 48;
+  const height = Math.max(...shown.map((a) => a.y)) + 64 - top;
   const glows = shown
     .map((a) => `<circle cx="${a.x}" cy="${a.y}" r="44" fill="${BIOME[a.biome].fill}" opacity=".24"/>`)
     .join('');
@@ -53,11 +67,12 @@ export function mapSvg(state: State, route: string[] = [], badges: string[] = ro
     const unseen = !state.visited.includes(area.id);
     const biome = BIOME[area.biome];
     const label = `${area.name}: ${done} of ${entries.length} done${here ? ', you are here' : ''}${badges.includes(area.id) ? `, ${now} available now` : ''}`;
-    return `<g class="node ${here ? 'is-here' : ''} ${unseen ? 'is-unseen' : ''}" transform="translate(${area.x} ${area.y})"
-        role="button" tabindex="0" aria-label="${label}" data-action="go" data-id="${area.id}" data-key="node-${area.id}">
+    const dim = dimOffRoute && !route.includes(area.id);
+    return `<g class="node ${here ? 'is-here' : ''} ${unseen ? 'is-unseen' : ''} ${dim ? 'is-dim' : ''}" transform="translate(${area.x} ${area.y})"
+        role="button" tabindex="0" aria-label="${label}" data-action="pick" data-id="${area.id}" data-key="node-${area.id}">
       <circle r="30" fill="transparent"/>
       ${here ? '<circle class="glow" r="27" fill="#f2c14e"/>' : ''}
-      <circle r="17" fill="${biome.fill}" stroke="${here ? '#f2c14e' : area.id === viewing ? '#ffffff' : '#00000055'}" stroke-width="${area.id === viewing && !here ? 3 : 2}"/>
+      <circle r="17" fill="${biome.fill}" stroke="${here ? '#f2c14e' : area.id === selected ? '#ffffff' : '#00000055'}" stroke-width="${area.id === selected && !here ? 3 : 2}"/>
       ${biome.glyph}
       ${ring(entries.length ? done / entries.length : 0)}
       ${now > 0 && badges.includes(area.id) ? `<g transform="translate(17 -17)"><circle r="10" fill="#f2c14e" stroke="#12172b" stroke-width="2"/><text class="badge" y="4" text-anchor="middle">${now}</text></g>` : ''}
@@ -66,7 +81,7 @@ export function mapSvg(state: State, route: string[] = [], badges: string[] = ro
     </g>`;
   }).join('');
 
-  return `<div class="map-wrap"><svg class="map" viewBox="0 ${top} 360 ${height}" role="group" aria-label="Map of areas">
+  return `<svg class="map" style="width:${Math.round(zoom * 100)}%" viewBox="0 ${top} 360 ${height}" role="group" aria-label="Map of areas">
     ${glows}${roads}${routeLine}${nodes}
-  </svg></div>`;
+  </svg>`;
 }
