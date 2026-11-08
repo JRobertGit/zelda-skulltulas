@@ -6,6 +6,7 @@ import {
   availableIn,
   checksFor,
   freshState,
+  heartTotals,
   isTripWorthwhile,
   lockoutsFor,
   markNotYet,
@@ -243,6 +244,22 @@ describe('the next question', () => {
 
   it('skips a question you already have', () => {
     expect(nextQuestion(withOwned('dekuClear', 'ocarina', 'lullaby'))?.id).toBe('saria');
+  });
+});
+
+describe('hearts', () => {
+  it('starts at 3 full hearts', () => {
+    expect(heartTotals(freshState())).toEqual({ pieces: 0, containers: 0, full: 3, partial: 0 });
+  });
+
+  it('adds one per container and one per four pieces, with the rest as a partial heart', () => {
+    const done = ['hp-ranch-silo', 'hp-kak-roof', 'hp-grave-dig', 'hp-grave-pull', 'hp-woods-mimic', 'story-heart-deku', 'story-heart-dodongo'];
+    expect(heartTotals({ ...freshState(), done })).toEqual({ pieces: 5, containers: 2, full: 6, partial: 1 });
+  });
+
+  it('reaches exactly 20 with everything', () => {
+    const done = ENTRIES.filter((e) => e.kind === 'heart' || e.id.startsWith('story-heart-')).map((e) => e.id);
+    expect(heartTotals({ ...freshState(), done })).toEqual({ pieces: 36, containers: 8, full: 20, partial: 0 });
   });
 });
 

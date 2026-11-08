@@ -59,6 +59,18 @@ export function tokenCount(state: State, entries: Entry[] = ENTRIES): number {
   return entries.filter((e) => e.kind === 'skulltula' && done.has(e.id)).length + state.extraTokens;
 }
 
+export const STARTING_HEARTS = 3;
+export const MAX_HEARTS = 20;
+
+/** The life bar: starting hearts, plus Heart Containers, plus one heart per four pieces. */
+export function heartTotals(state: State, entries: Entry[] = ENTRIES) {
+  const done = new Set(state.done);
+  const pieces = entries.filter((e) => e.kind === 'heart' && done.has(e.id)).length;
+  const containers = entries.filter((e) => e.id.startsWith('story-heart-') && done.has(e.id)).length;
+  const full = Math.min(MAX_HEARTS, STARTING_HEARTS + containers + Math.floor(pieces / 4));
+  return { pieces, containers, full, partial: full < MAX_HEARTS ? pieces % 4 : 0 };
+}
+
 export function statusOf(entry: Entry, state: State, entries: Entry[] = ENTRIES): Status {
   if (state.done.includes(entry.id)) return 'done';
   if (childLocked(entry, state)) return 'blocked';

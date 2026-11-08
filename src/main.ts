@@ -7,6 +7,7 @@ import {
   checksFor,
   entriesIn,
   freshState,
+  heartTotals,
   isTripWorthwhile,
   lockoutsFor,
   markNotYet,
@@ -227,11 +228,13 @@ function countOf(kind: Kind): number {
 
 function progressView(): string {
   const tokens = Math.min(tokenCount(state), TOTALS.skulltula);
-  const hearts = countOf('heart');
+  const life = heartTotals(state);
+  const hearts = life.pieces;
+  const containerTotal = ENTRIES.filter((e) => e.id.startsWith('story-heart-')).length;
   const bottles = countOf('bottle');
   const songs = countOf('song');
-  const heartCells = Array.from({ length: 9 }, (_, i) =>
-    quarteredHeart(Math.max(0, Math.min(4, hearts - i * 4))),
+  const heartCells = Array.from({ length: 20 }, (_, i) =>
+    quarteredHeart(i < life.full ? 4 : i === life.full ? life.partial : 0),
   ).join('');
   const tokenCells = Array.from({ length: TOTALS.skulltula }, (_, i) =>
     `<i class="${i < tokens ? 'lit' : ''}"></i>`,
@@ -259,8 +262,9 @@ function progressView(): string {
       </div>
     </div>
     <div class="stat">
-      <header><span class="stat-icon">${kindIcon('heart')}</span><h2>Pieces of Heart</h2><b>${hearts}<small>/${TOTALS.heart}</small></b></header>
+      <header><span class="stat-icon">${kindIcon('heart')}</span><h2>Hearts</h2><b>${life.full}<small>/20</small></b></header>
       <div class="heart-grid">${heartCells}</div>
+      <p class="muted heart-sum">3 to start + <b>${life.containers}</b>/${containerTotal} Heart Containers + <b>${hearts}</b>/${TOTALS.heart} Pieces of Heart${life.partial ? ` (${life.partial} toward the next)` : ''}</p>
     </div>
     <div class="stat-row">
       <div class="stat">

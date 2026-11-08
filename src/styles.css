@@ -189,7 +189,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .token-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
 .token-grid i { aspect-ratio: 1; border-radius: 50%; background: #ffffff14; }
 .token-grid i.lit { background: var(--gold); box-shadow: 0 0 8px #f2c14e88; }
-.heart-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }
+.heart-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.heart-sum { margin-top: 10px; }
+.heart-sum b { color: var(--text); }
 .heart-cell { display: block; width: 100%; }
 .slots { display: flex; flex-wrap: wrap; gap: 2px; }
 .slots .icon { width: 26px; height: 26px; }
