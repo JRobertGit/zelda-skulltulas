@@ -420,6 +420,7 @@ function render(): void {
   } else if (map && kept) {
     [map.scrollLeft, map.scrollTop] = kept;
   }
+  if (map) repaintMap();
   if (leavingTo) {
     root.querySelector<HTMLElement>('[data-key="stay"]')?.focus();
   } else if (focusKey) {
@@ -436,6 +437,22 @@ function centerMap(): void {
   const frame = wrap.getBoundingClientRect();
   wrap.scrollLeft += box.left + box.width / 2 - frame.left - wrap.clientWidth / 2;
   wrap.scrollTop += box.top + box.height / 2 - frame.top - wrap.clientHeight / 2;
+}
+
+/**
+ * iPhone Safari can skip drawing the map's text (names and number badges) after
+ * a reload until something redraws it. Nudge the map so it is painted again on
+ * the next frames.
+ */
+function repaintMap(): void {
+  requestAnimationFrame(() => {
+    const svg = root.querySelector<SVGElement>('.map');
+    if (!svg) return;
+    svg.style.transform = 'translateZ(0)';
+    requestAnimationFrame(() => {
+      svg.style.transform = '';
+    });
+  });
 }
 
 function setZoom(next: number): void {
@@ -629,3 +646,9 @@ root.addEventListener('change', async (event) => {
 });
 
 render();
+// The font can finish loading after the first draw. Redraw once it has, so the
+// map's text isn't left blank on iPhone.
+document.fonts?.ready.then(() => {
+  if (tab === 'map' || tab === 'trips') render();
+});
+window.addEventListener('pageshow', () => render());
