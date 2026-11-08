@@ -15,6 +15,21 @@ const BIOME: Record<Area['biome'], { fill: string; glyph: string }> = {
 };
 
 
+/** Each dungeon gets its own original icon and colour, so they're easy to tell apart. */
+const DUNGEONS: Record<string, { fill: string; glyph: string }> = {
+  deku: BIOME.dungeon,
+  dodongo: { fill: '#6b2f22', glyph: '<path d="M-7 1C-7-5-3-8 0-8S7-5 7 1C7 4 5 5 4 5V8H-4V5C-5 5-7 4-7 1Z" fill="#f1d9b5"/><circle cx="-3" cy="0" r="2" fill="#6b2f22"/><circle cx="3" cy="0" r="2" fill="#6b2f22"/>' },
+  jabu: { fill: '#1d6b6b', glyph: '<path d="M-8 0C-4-6 3-6 6 0C3 6-4 6-8 0ZM6 0L9-4V4Z" fill="#a6f0e6"/><circle cx="-3" cy="-1" r="1.3" fill="#1d6b6b"/>' },
+  forest: { fill: '#2b6a3a', glyph: '<path d="M-6 6C-6-4 0-8 7-8C7 0 3 6-6 6Z" fill="#9fe39a"/><path d="M-6 6L3-3" stroke="#2b6a3a" stroke-width="1.6"/>' },
+  fire: { fill: '#8a2b1d', glyph: '<path d="M0-9C3-5 7-2 7 2A7 7 0 0 1-7 2C-7-1-5-3-3-5C-3-2-2-1 0 0C1-3 0-6 0-9Z" fill="#ffb15c"/>' },
+  ice: { fill: '#3f7ea6', glyph: '<path d="M0-8V8M-7-4L7 4M-7 4L7-4" stroke="#e3f7ff" stroke-width="2" stroke-linecap="round"/>' },
+  water: { fill: '#1d4f8a', glyph: '<path d="M0-9C3-4 6-1 6 3A6 6 0 0 1-6 3C-6-1-3-4 0-9Z" fill="#9fd8ff"/>' },
+  well: { fill: '#4a4f63', glyph: '<path d="M-7-5H7M-5-5V7M5-5V7M-7 2H7" stroke="#d6dbe8" stroke-width="2" fill="none" stroke-linecap="round"/>' },
+  shadow: { fill: '#3a2366', glyph: '<path d="M-8 0C-4-6 4-6 8 0C4 6-4 6-8 0Z" fill="#d7c2ff"/><circle r="2.5" fill="#3a2366"/>' },
+  spirit: { fill: '#8a5a1d', glyph: '<circle r="4" fill="#ffd28a"/><path d="M0-9V-6M0 6V9M-9 0H-6M6 0H9M-6-6L-4-4M4 4L6 6M-6 6L-4 4M4-4L6-6" stroke="#ffd28a" stroke-width="1.8" stroke-linecap="round"/>' },
+  training: { fill: '#6e5a2e', glyph: '<circle r="7" fill="none" stroke="#ffe6b0" stroke-width="2"/><circle r="3" fill="#ffe6b0"/>' },
+};
+
 /** Long names wrap onto two lines so neighbouring labels never touch. */
 function label2(name: string): string {
   const words = name.split(' ');
@@ -77,7 +92,7 @@ export function mapSvg(state: State, options: MapOptions = {}): string {
     const here = area.id === state.current;
     const stop = route.indexOf(area.id);
     const unseen = !state.visited.includes(area.id);
-    const biome = BIOME[area.biome];
+    const biome = DUNGEONS[area.id] ?? BIOME[area.biome];
     const label = `${area.name}: ${done} of ${entries.length} done${here ? ', you are here' : ''}${badges.includes(area.id) ? `, ${now} available now` : ''}`;
     const dim = dimOffRoute && !route.includes(area.id);
     return `<g class="node ${here ? 'is-here' : ''} ${unseen ? 'is-unseen' : ''} ${dim ? 'is-dim' : ''}" transform="translate(${area.x} ${area.y})"

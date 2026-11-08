@@ -111,6 +111,18 @@ describe('data integrity', () => {
     }
   });
 
+  it('gives every dungeon its own icon', async () => {
+    const { mapSvg } = await import('../src/map');
+    const all = { ...freshState(), owned: ABILITIES.map((a) => a.id) };
+    const svg = mapSvg(all);
+    const dungeons = AREAS.filter((a) => a.biome === 'dungeon');
+    const glyphs = dungeons.map((d) => {
+      const node = svg.split('data-id="' + d.id + '"')[1];
+      return node.slice(node.indexOf('<circle r="17"'), node.indexOf('<circle r="21"'));
+    });
+    expect(new Set(glyphs).size).toBe(dungeons.length);
+  });
+
   it('lays out the map with no shared spots and no crossing roads', () => {
     const spots = AREAS.map((a) => `${a.x},${a.y}`);
     expect(new Set(spots).size).toBe(spots.length);
