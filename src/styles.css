@@ -73,10 +73,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .node .label { fill: var(--text); font-size: 10.5px; letter-spacing: -.1px; font-weight: 700; paint-order: stroke; stroke: #101527; stroke-width: 3.5px; }
 .node .badge { fill: #12172b; font-size: 13px; font-weight: 800; }
 .node .stop { fill: var(--gold); font-size: 10.5px; font-weight: 800; }
-.glow { opacity: .28; animation: glow 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+/* Kept still: on iPhone Safari a pulsing ring stopped nearby map text from being drawn. */
+.glow { opacity: .28; }
 .route-line { animation: march 1s linear infinite; }
 
-@keyframes glow { 50% { opacity: .1; transform: scale(1.14); } }
 @keyframes march { to { stroke-dashoffset: -19; } }
 
 /* Panels */
