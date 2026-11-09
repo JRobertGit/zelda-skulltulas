@@ -18,8 +18,9 @@ export const LOCKOUTS: Lockout[] = [
     severity: 'for-a-while',
     showAfter: ['songTime'],
     hideAfter: ['forestClear'],
+    warnBefore: 'adult',
     title: "Finish your child list before drawing the sword",
-    detail: "Once you draw it, you can't go back to childhood until the Forest Temple is finished. Plant your beans, do the masks and clear your return trips first.",
+    detail: "Once you draw it, you can't go back to childhood until the Forest Temple is finished. Plant a Magic Bean in every soft soil patch, finish the masks and clear your return trips first.",
     sources: ['rpgsite', 'respec'],
   },
   {
@@ -49,7 +50,7 @@ export const LOCKOUTS: Lockout[] = [
     severity: 'recoverable',
     showAfter: ['bombs'],
     title: 'Buy all the beans you can afford, every visit',
-    detail: 'You need all of them for 100%, and his stock runs out. Plant one in every soft soil patch you see as a child. Missed ones can still be planted later.',
+    detail: 'You need all of them for 100%, and his stock runs out. Each soft soil patch shows up as a "Plant a Magic Bean" step, so you will not miss one.',
     sources: ['rpgsite', 'respec', 'game8'],
   },
   {

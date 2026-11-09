@@ -121,6 +121,18 @@ export function waitingGates(state: State): Ability[] {
   return ABILITIES.filter((a) => isGate(a) && canAsk(a, state) && state.notYet.includes(a.id));
 }
 
+/** Warnings tied to answering a check, shown with it in the Next step box. */
+export function warningsBefore(ability: string, state: State, lockouts: Lockout[] = LOCKOUTS): Lockout[] {
+  return lockouts.filter(
+    (l) => l.warnBefore === ability && !(l.hideAfter && hasAll(state, l.hideAfter)),
+  );
+}
+
+/** Child-era things still available, used to warn before the age change. */
+export function childLeft(state: State, entries: Entry[] = ENTRIES): Entry[] {
+  return entries.filter((e) => !e.quiet && e.age === 'child' && statusOf(e, state, entries) === 'now');
+}
+
 export function neighbours(area: string): string[] {
   return ROADS.flatMap(([a, b]) => (a === area ? [b] : b === area ? [a] : []));
 }

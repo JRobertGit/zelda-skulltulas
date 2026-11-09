@@ -1,4 +1,4 @@
-export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward' | 'chest' | 'quest' | 'story';
+export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward' | 'chest' | 'quest' | 'story' | 'plant';
 
 export type Age = 'child' | 'adult';
 
@@ -55,6 +55,8 @@ export interface Lockout {
   hideAfter?: string[];
   /** No longer relevant once this entry is collected. */
   hideIfDone?: string;
+  /** Also shown in the Next step box while this check is the next question. */
+  warnBefore?: string;
   title: string;
   detail: string;
   disputed?: string;

@@ -28,6 +28,8 @@ import {
   toggleDone,
   waitingFor,
   waitingGates,
+  warningsBefore,
+  childLeft,
 } from '../src/logic';
 import type { Entry, State } from '../src/types';
 
@@ -289,6 +291,44 @@ describe('hearts', () => {
   it('reaches exactly 20 with everything', () => {
     const done = ENTRIES.filter((e) => e.kind === 'heart' || e.id.startsWith('story-heart-')).map((e) => e.id);
     expect(heartTotals({ ...freshState(), done })).toEqual({ pieces: 36, containers: 8, full: 20, partial: 0 });
+  });
+});
+
+describe('magic beans', () => {
+  it('blocks every bean ride until its spot is planted', () => {
+    const rides = ENTRIES.filter((e) => e.after?.startsWith('bean-'));
+    expect(rides.length).toBeGreaterThanOrEqual(8);
+    const adult = withOwned(...ABILITIES.map((a) => a.id));
+    for (const ride of rides) {
+      expect(statusOf(ride, adult), ride.id).toBe('blocked');
+      expect(statusOf(ride, toggleDone(adult, ride.after!)), ride.id).toBe('now');
+    }
+  });
+
+  it('lists ten planting spots, all as a child', () => {
+    const plants = ENTRIES.filter((e) => e.kind === 'plant');
+    expect(plants).toHaveLength(10);
+    for (const p of plants) {
+      expect(p.age).toBe('child');
+      expect(p.needs).toContain('beans');
+    }
+  });
+
+  it('shows planting where you are, so leaving warns about it', () => {
+    const state = { ...withOwned('dekuClear', 'beans', 'bracelet'), current: 'graveyard' };
+    expect(availableIn('graveyard', state).map((e) => e.id)).toContain('bean-grave');
+  });
+
+  it('cannot plant between drawing the sword and the Forest Temple', () => {
+    expect(statusOf(entry('bean-grave'), withOwned('beans', 'adult'))).toBe('blocked');
+    expect(statusOf(entry('bean-grave'), withOwned('beans', 'adult', 'forestClear'))).toBe('now');
+  });
+
+  it('warns before the sword, counting what is left as a child', () => {
+    const state = withOwned('dekuClear', 'beans', 'songTime', 'bombs', 'boomerang');
+    expect(warningsBefore('adult', state).map((l) => l.id)).toEqual(['sword']);
+    expect(childLeft(state).some((e) => e.kind === 'plant')).toBe(true);
+    expect(warningsBefore('adult', { ...state, owned: [...state.owned, 'forestClear'] })).toEqual([]);
   });
 });
 

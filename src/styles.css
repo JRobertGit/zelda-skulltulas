@@ -171,6 +171,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Next step */
 .next-step { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; padding: 12px; background: #f2c14e1f; border: 2px solid var(--gold); border-radius: 14px; }
+.next-step .alert { width: 100%; margin: 0; }
+.child-left { width: 100%; margin: 0; color: var(--gold); font-size: 14px; font-weight: 700; }
 .next-step .checks-label { width: 100%; color: var(--gold); font-size: 14px; font-weight: 800; }
 
 /* Warnings */

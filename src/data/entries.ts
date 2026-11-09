@@ -40,6 +40,9 @@ const bottle = (id: string, area: string, where: string, needs: string[], o: Opt
   make('bottle', id, area, 'Empty Bottle', where, needs, { grants: 'bottle', ...o });
 const chest = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
   make('chest', id, area, name, where, needs, o);
+/** Planting is a child-era step that a later adult reward depends on. */
+const plant = (id: string, area: string, where: string, needs: string[]) =>
+  make('plant', id, area, 'Plant a Magic Bean', where, ['beans', ...needs], { age: 'child' });
 const item = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
   make('reward', id, area, name, where, needs, o);
 
@@ -64,7 +67,7 @@ export const ENTRIES: Entry[] = [
   // Lost Woods
   gs('gs-woods-soil-a', 'lostwoods', 'From the Kokiri entrance go left, then out the far side: soft soil. Release a bug', ['dekuClear', 'bottle'], child),
   gs('gs-woods-soil-b', 'lostwoods', 'Forest Stage (right, left, right, left, left): soft soil. Release a bug', ['dekuClear', 'bottle'], child),
-  gs('gs-woods-bean', 'lostwoods', 'Past Mido, go left: ride the bean plant you planted as a child', ['beans'], adultNight),
+  gs('gs-woods-bean', 'lostwoods', 'Forest Stage (past Mido, go left as an adult): ride the bean plant', [], { ...adultNight, after: 'bean-woods-stage' }),
   hp('hp-woods-mimic', 'lostwoods', 'Below the target: stand on the stump and copy the two Skull Kids until they pay up', ['ocarina'], child),
   hp('hp-woods-saria', 'lostwoods', "Lone Skull Kid, first left from Kokiri: play Saria's Song", ['saria'], child),
   up('up-woods-seeds', 'lostwoods', 'Biggest Deku Seed Bag', 'Right from the Kokiri entrance: hit the target three times', ['slingshot'], child),
@@ -156,7 +159,7 @@ export const ENTRIES: Entry[] = [
   gs('gs-grave-wall', 'graveyard', "Behind Dampe's hut, on the right by the fence: use the Boomerang", ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
   hp('hp-grave-dig', 'graveyard', "Dampe's Gravedigging Tour: random. Pay extra when he says it's something hard", ['dekuClear'], childNight),
   hp('hp-grave-pull', 'graveyard', 'Pull open the right-most normal grave facing the big tomb, then drop in', ['dekuClear'], childNight),
-  hp('hp-grave-bean', 'graveyard', 'Ride the bean plant you planted as a child, in the north', ['beans'], adult),
+  hp('hp-grave-bean', 'graveyard', 'Ride the bean plant in the north, by the dead tree', [], { ...adult, after: 'bean-grave' }),
   hp('hp-grave-race', 'graveyard', "Beat Dampe's race in under a minute", ['hookshot'], adult),
   make('shield', 'shield-grave', 'graveyard', 'Hylian Shield', 'Second grave on the right of the path to the big tomb: pull it, defeat what\'s inside, open the chest', ['dekuClear'], childNight),
   song('song-sun', 'graveyard', "Sun's Song", "Top of the graveyard: play Zelda's Lullaby on the symbol, then go through the tomb", ['lullaby'], { ...child, grants: 'sun' }),
@@ -172,7 +175,7 @@ export const ENTRIES: Entry[] = [
   gs('gs-trail-rock-a', 'trail', 'Where rocks fell on you earlier: smash the rocks on the path with the Hammer', ['hammer'], adult),
   gs('gs-trail-rock-b', 'trail', 'Rock near the Goron City entrance: smash it with the Hammer', ['hammer'], adult),
   fairy('fairy-dins', 'trail', "Din's Fire", "Mountain peak, left of the owl: bomb the cave, play Zelda's Lullaby, pay up", ['bombs', 'lullaby'], { ...child, grants: 'dins' }),
-  hp('hp-trail-bean', 'trail', 'Ride the bean plant you planted outside Dodongo Cavern as a child', ['beans'], adult),
+  hp('hp-trail-bean', 'trail', 'Ride the bean plant outside Dodongo Cavern', [], { ...adult, after: 'bean-trail' }),
 
   // Dodongo Cavern
   gs('gs-dodongo-stairs', 'dodongo', 'Bomb flower staircase: look up behind the stairs as you loop around', ['bracelet']),
@@ -191,9 +194,9 @@ export const ENTRIES: Entry[] = [
 
   // The Crater
   gs('gs-crater-crate', 'crater', 'From the peak, duck in and go left: smash the two crates, then get out', ['bombs'], child),
-  gs('gs-crater-soil', 'crater', 'Warp in with Bolero as a child: soft soil next to the warp. Release a bug, plant a bean', ['bolero', 'forestClear', 'bottle'], child),
+  gs('gs-crater-soil', 'crater', 'Warp in with Bolero as a child: soft soil next to the warp. Release a bug', ['bolero', 'forestClear', 'bottle'], child),
   hp('hp-crater-grates', 'crater', 'After the Fire Temple: climb down between the two grates in the south', ['hammer'], adult),
-  hp('hp-crater-bean', 'crater', 'Ride the bean plant by the warp point', ['bolero', 'forestClear', 'beans'], adult),
+  hp('hp-crater-bean', 'crater', 'Ride the bean plant by the warp point', ['bolero'], { ...adult, after: 'bean-crater' }),
   hp('hp-crater-scrub', 'crater', 'As a child from the peak: go left and down to the Business Scrub. 100 Rupees. Heal first, the heat is a timer', ['bombs'], child),
   song('song-bolero', 'crater', 'Bolero of Fire', 'Hookshot across the broken bridge on your first adult visit', ['hookshot'], { ...adult, grants: 'bolero' }),
   fairy('fairy-double', 'crater', 'Double Magic', "West side: smash the rock, play Zelda's Lullaby, pay 200 Rupees", ['hammer'], adult),
@@ -208,7 +211,7 @@ export const ENTRIES: Entry[] = [
   // Zora's River
   gs('gs-river-soil', 'river', 'New in the remake: soft soil right next to the bean seller. Release a bug', ['bombs', 'bottle'], { ...child, sources: [...BOTH, 'thegamer', 'gamingroute'] }),
   gs('gs-river-rock', 'river', 'Top end of the river: drop to the lowest level, behind the stone column holding up the bridge', ['boomerang'], { ...childNight, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides disagree on whether it needs night and the Boomerang.' }),
-  gs('gs-river-adult-a', 'river', 'Raised section with the Gossip Stone, heading back toward the field', ['hookshot', 'beans'], adultNight),
+  gs('gs-river-adult-a', 'river', 'Ride the bean plant by the seller to the raised section with the Gossip Stone, then Hookshot it', ['hookshot'], { ...adultNight, after: 'bean-river' }),
   gs('gs-river-adult-b', 'river', 'Last corner of the river: turn around and look high up', ['hookshot'], adultNight),
   hp('hp-river-grotto', 'river', 'Carry a Cucco over the gap, climb the vines, take the Cucco in the grotto and flutter to the ledge', ['bombs'], child),
   hp('hp-river-end', 'river', 'Same Cucco, up to where the path zig-zags: flutter back down to the ledge', ['bombs'], child),
@@ -248,7 +251,7 @@ export const ENTRIES: Entry[] = [
   gs('gs-lake-tree', 'lake', 'Longshot up to the vines on the tree where you land after the Water Temple', ['longshot'], adultNight),
   gs('gs-lake-tank', 'lake', 'Bottom of the Lab tank with the Iron Boots, then Hookshot it', ['ironBoots'], adult),
   hp('hp-lake-fish', 'lake', 'Fishing Pond: catch a fish of 55cm or more', ['bombs'], child),
-  hp('hp-lake-bean', 'lake', 'Ride the bean plant by the Lab, around to its roof', ['beans', 'hookshot'], adult),
+  hp('hp-lake-bean', 'lake', 'Ride the bean plant by the Lab, around to its roof', ['hookshot'], { ...adult, after: 'bean-lake' }),
   hp('hp-lake-tank', 'lake', 'Lab tank: dive to the bottom using the Golden Scale, no boots', ['goldenScale'], adult),
   bottle('bottle-lake', 'lake', 'Underwater right by the Zora warp exit. It holds a letter for the story', ['silverScale'], child),
   up('up-golden-scale', 'lake', 'Golden Scale', 'Fishing Pond: catch a fish of 65cm or more', ['longshot'], { ...adult, grants: 'goldenScale' }),
@@ -297,9 +300,9 @@ export const ENTRIES: Entry[] = [
   // Mirage Desert and Colossus
   gs('gs-desert', 'desert', 'Small building past the quicksand: down the pit in the middle', ['gerudoPass'], adult),
   gs('gs-colossus-birds', 'colossus', 'North of the area, beneath the birds', ['gerudoPass', 'hookshot'], adultNight),
-  gs('gs-colossus-soil', 'colossus', 'Warp in as a child: soft soil left of the temple door. Release a bug, plant a bean', ['requiem', 'bottle'], child),
-  gs('gs-colossus-bean', 'colossus', 'Ride the bean plant by the temple door', ['requiem', 'beans'], adultNight),
-  hp('hp-colossus-bean', 'colossus', 'Stay on the bean plant to the further rock', ['requiem', 'beans'], adult),
+  gs('gs-colossus-soil', 'colossus', 'Warp in as a child: soft soil left of the temple door. Release a bug', ['requiem', 'bottle'], child),
+  gs('gs-colossus-bean', 'colossus', 'Ride the bean plant by the temple door', ['requiem'], { ...adultNight, after: 'bean-colossus' }),
+  hp('hp-colossus-bean', 'colossus', 'Stay on the bean plant to the further rock', ['requiem'], { ...adult, after: 'bean-colossus' }),
   fairy('fairy-nayru', 'colossus', "Nayru's Love", "On your right as you enter: bomb the wall, play Zelda's Lullaby, pay 300 Rupees", ['gerudoPass'], adult),
   song('song-requiem', 'colossus', 'Requiem of Spirit', 'Walk toward the Spirit Temple door', ['gerudoPass'], { ...adult, grants: 'requiem' }),
 
@@ -309,6 +312,18 @@ export const ENTRIES: Entry[] = [
   gs('gs-spirit-door', 'spirit', 'After the sun block puzzle: look behind you above the door', ['requiem'], child),
   gs('gs-spirit-time', 'spirit', 'Rolling boulder room: Song of Time moves the blue block. It hides in one alcove', ['silverGauntlets'], adult),
   gs('gs-spirit-pierre', 'spirit', "Statue room, ledge by the chest hand: play the Scarecrow's Song", ['silverGauntlets', 'scarecrow'], adult),
+  // Magic Bean planting. Each adult bean ride needs its spot planted as a child.
+  plant('bean-kokiri', 'kokiri', 'Soft soil behind the shop. Release a bug first if the Skulltula is still there', []),
+  plant('bean-woods-a', 'lostwoods', 'From the Kokiri entrance go left, then left again: the soft soil', []),
+  plant('bean-woods-stage', 'lostwoods', 'Forest Stage soft soil (right, left, right, left, left)', []),
+  plant('bean-grave', 'graveyard', 'Soft soil in the north, by the dead tree', []),
+  plant('bean-trail', 'trail', 'Soft soil at the Dodongo Cavern entrance', ['bracelet']),
+  plant('bean-river', 'river', 'Soft soil right next to the bean seller', []),
+  plant('bean-lake', 'lake', 'Soft soil outside the Lakeside Laboratory', []),
+  plant('bean-valley', 'valley', 'Soft soil on the ledge with the cow, reached with a Cucco glide', ['boomerang']),
+  plant('bean-crater', 'crater', 'Warp in with Bolero as a child: soft soil by the warp point. You burn, so be quick', ['bolero', 'forestClear']),
+  plant('bean-colossus', 'colossus', 'Warp in with Requiem as a child: soft soil left of the Spirit Temple door', ['requiem']),
+
   // Biggoron Sword trading quest, in order
   ...([
     ['q-egg', 'kakariko', 'Pocket Egg', 'Talk to the Cucco Lady', ['adult'], undefined],

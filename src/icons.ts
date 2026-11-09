@@ -76,6 +76,10 @@ const KIND_ICONS: Record<Kind, () => string> = {
   shield: () =>
     svg(`<path d="M16 3 L27 7 V15 C27 22 22 27 16 29 C10 27 5 22 5 15 V7 Z" fill="#2c4f9e" stroke="#c6d2ee" stroke-width="1.8"/>
     <path d="M16 8 L20 16 L16 24 L12 16 Z" fill="#c6d2ee"/>`),
+  plant: () =>
+    svg(`<path d="M16 28V15" stroke="#7fd6a0" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M16 17C16 10 11 7 5 8C5 14 9 18 16 17Z" fill="#7fd6a0"/><path d="M16 15C16 9 21 6 27 7C27 13 23 16 16 15Z" fill="#a3e9b9"/>
+    <ellipse cx="16" cy="28" rx="8" ry="2.6" fill="#7a5a33"/>`),
   chest: () =>
     svg(`<path d="M4 14C4 8 8 6 16 6S28 8 28 14V26H4Z" fill="#7a5a33" stroke="#d6a65f" stroke-width="1.6"/>
     <path d="M4 15H28" stroke="#d6a65f" stroke-width="2"/><rect x="13" y="12.5" width="6" height="7" rx="1" fill="#f2c14e"/>`),

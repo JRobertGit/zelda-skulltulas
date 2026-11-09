@@ -5,6 +5,7 @@ import { bottle, kindIcon, note, quarteredHeart, spider, ui } from './icons';
 import {
   availableIn,
   checksFor,
+  childLeft,
   entriesIn,
   freshState,
   heartTotals,
@@ -30,6 +31,7 @@ import {
   toggleFlag,
   waitingFor,
   waitingGates,
+  warningsBefore,
 } from './logic';
 import { mapSvg } from './map';
 import { downloadBackup, load, readBackup, save } from './store';
@@ -127,6 +129,8 @@ function hereView(): string {
       </header>
       ${doors.length ? `<div class="doors"><span>Next door</span>${doors.map((d) => `<button class="door" data-action="go" data-id="${d.id}" data-key="door-${d.id}">${esc(areaName(d.id))}${d.count ? `<em>${d.count}</em>` : ''}</button>`).join('')}</div>` : ''}
       ${next ? `<div class="next-step"><span class="checks-label">Next step: unlocks more of the map</span>
+        ${warningsBefore(next.id, state).map(lockoutBanner).join('')}
+        ${next.id === 'adult' && childLeft(state).length ? `<p class="child-left">${childLeft(state).length} child-only ${childLeft(state).length === 1 ? 'thing is' : 'things are'} still available. ${childLeft(state).filter((e) => e.kind === 'plant').length} of them are beans to plant. Return trips lists where.</p>` : ''}
         <div class="check-row"><span>${esc(next.label)}</span>
           <button class="chip yes" data-action="own" data-id="${next.id}" data-key="o-${next.id}">Yes</button>
           <button class="chip" data-action="not-yet" data-id="${next.id}" data-key="n-${next.id}">Not yet</button></div></div>` : ''}
@@ -287,7 +291,7 @@ function progressView(): string {
   const globals = lockoutsFor(null, state);
   const named = (kind: Kind) => ENTRIES.filter((e) => e.kind === kind && state.done.includes(e.id)).map((e) => e.name);
   const nameList = (names: string[]) => names.length ? `<ul class="names">${names.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
-  const others: [string, Kind[]][] = [['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Mask quest', ['mask']], ['Biggoron Sword quest', ['quest']], ['Other items', ['reward', 'shield']]];
+  const others: [string, Kind[]][] = [['Magic Beans planted', ['plant']], ['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Mask quest', ['mask']], ['Biggoron Sword quest', ['quest']], ['Other items', ['reward', 'shield']]];
   const story = ENTRIES.filter((e) => e.kind === 'story');
   const storyDone = story.filter((e) => state.done.includes(e.id));
   const storyNow = story.filter((e) => statusOf(e, state) === 'now');
