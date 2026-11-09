@@ -332,6 +332,30 @@ describe('magic beans', () => {
   });
 });
 
+describe('cross-age set-up steps', () => {
+  const all = () => withOwned(...ABILITIES.map((a) => a.id));
+
+  it("needs the child scarecrow tune before the adult Scarecrow's Song", () => {
+    expect(statusOf(entry('song-scarecrow'), all())).toBe('blocked');
+    expect(statusOf(entry('song-scarecrow'), toggleDone(all(), 'scarecrow-child'))).toBe('now');
+    expect(entry('scarecrow-child').age).toBe('child');
+  });
+
+  it("needs Epona's Song from childhood before Epona", () => {
+    expect(statusOf(entry('item-epona'), withOwned('adult'))).toBe('blocked');
+    expect(statusOf(entry('item-epona'), toggleDone(withOwned('adult', 'ocarina'), 'song-epona'))).toBe('now');
+  });
+
+  it('needs the adult Fairy Note read before each time-travel Piece of Heart', () => {
+    for (const [note, heart] of [['note-field-chest', 'hp-field-chest'], ['note-field-shop', 'hp-field-shop']]) {
+      expect(entry(note).age).toBe('adult');
+      expect(entry(heart).age).toBe('child');
+      expect(statusOf(entry(heart), all()), heart).toBe('blocked');
+      expect(statusOf(entry(heart), toggleDone(all(), note)), heart).toBe('now');
+    }
+  });
+});
+
 describe('answering not yet', () => {
   it('stops asking, and clears the answer once you have it', () => {
     let state = markNotYet(freshState(), 'slingshot');

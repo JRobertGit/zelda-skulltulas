@@ -1,4 +1,4 @@
-export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward' | 'chest' | 'quest' | 'story' | 'plant';
+export type Kind = 'skulltula' | 'heart' | 'bottle' | 'upgrade' | 'song' | 'fairy' | 'shield' | 'mask' | 'reward' | 'chest' | 'quest' | 'story' | 'plant' | 'step';
 
 export type Age = 'child' | 'adult';
 

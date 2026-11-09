@@ -43,6 +43,9 @@ const chest = (id: string, area: string, name: string, where: string, needs: str
 /** Planting is a child-era step that a later adult reward depends on. */
 const plant = (id: string, area: string, where: string, needs: string[]) =>
   make('plant', id, area, 'Plant a Magic Bean', where, ['beans', ...needs], { age: 'child' });
+/** A set-up action that a later reward depends on, often in the other age. */
+const step = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
+  make('step', id, area, name, where, needs, o);
 const item = (id: string, area: string, name: string, where: string, needs: string[], o: Options = {}) =>
   make('reward', id, area, name, where, needs, o);
 
@@ -85,8 +88,10 @@ export const ENTRIES: Entry[] = [
   gs('gs-field-tree', 'field', 'West of the Kokiri Forest entrance: roll into the lone skinny tree where the stream ends', ['dekuClear'], { sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Guides disagree on when it appears: as a child at night, as an adult, or one tree for each.' }),
   gs('gs-field-grotto', 'field', 'South woods between Lake Hylia and the ranch: bomb the crack by the rock wall, then Hookshot it in the grotto', ['bombs', 'hookshot'], { ...adult, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Changed in the remake. Older guides list it as a child; one says you clear a normal Skulltula there as a child first.' }),
   gs('gs-field-crate', 'field', 'Wetland with shallow pools: bomb the grey cracked circle, drop in, break the crate', ['bombs'], { ...adult, sources: [...BOTH, 'thegamer', 'gamingroute'], disputed: 'Changed in the remake. Guides place it in different parts of the field, and one says it works as a child too.' }),
-  hp('hp-field-chest', 'field', 'Red-rock outcrop near the Gerudo side. As an adult read the Fairy Note, then open the chest as a child', ['adult', 'forestClear'], child),
-  hp('hp-field-shop', 'field', 'Grotto by the single tree beside the castle-side moat. Read the note as an adult, give the password as a child, pay 100 Rupees', ['adult', 'forestClear', 'bombs'], child),
+  step('note-field-chest', 'field', 'Read the Fairy Note by the empty chest', 'Under the red-rock outcrop near the Gerudo side. The chest only opens for you as a child after you read this', [], adult),
+  step('note-field-shop', 'field', 'Read the Fairy Note on the lone tree', 'Strip of land beside the castle-side moat. It gives the password for the grotto shop', [], adult),
+  hp('hp-field-chest', 'field', 'Open the chest under the red-rock outcrop near the Gerudo side, now that you read its note', ['forestClear'], { ...child, after: 'note-field-chest' }),
+  hp('hp-field-shop', 'field', "Grotto by the lone tree beside the castle-side moat: give the note's password, pay 100 Rupees", ['forestClear', 'bombs'], { ...child, after: 'note-field-shop' }),
   item('quest-poes', 'field', 'Big Poes (all ten)', 'Jump Epona over the glowing purple lanterns, shoot them, bottle them, sell at the Market Poe Shop', ['epona', 'bow', 'bottle'], adult),
 
   // Market
@@ -131,7 +136,7 @@ export const ENTRIES: Entry[] = [
   hp('hp-ranch-silo', 'lonlon', 'South-west silo building: move the blocks and crawl through the gap', ['dekuClear'], child),
   bottle('bottle-ranch', 'lonlon', 'Win the Super Cucco game, first door on the left as you enter', ['dekuClear'], child),
   song('song-epona', 'lonlon', "Epona's Song", 'Take out your Ocarina in front of Malon in the paddock', ['ocarina'], child),
-  item('item-epona', 'lonlon', 'Epona', "Pay to ride, play Epona's Song, then beat Ingo in the races and jump the fence", ['adult'], { ...adult, grants: 'epona' }),
+  item('item-epona', 'lonlon', 'Epona', "Pay to ride, play Epona's Song, then beat Ingo in the races and jump the fence", [], { ...adult, grants: 'epona', after: 'song-epona' }),
 
   // Kakariko
   gs('gs-kak-ladder', 'kakariko', 'Ladder of the watchtower: shoot it with the Slingshot, then climb for the token', ['dekuClear', 'slingshot'], childNight),
@@ -256,7 +261,8 @@ export const ENTRIES: Entry[] = [
   bottle('bottle-lake', 'lake', 'Underwater right by the Zora warp exit. It holds a letter for the story', ['silverScale'], child),
   up('up-golden-scale', 'lake', 'Golden Scale', 'Fishing Pond: catch a fish of 65cm or more', ['longshot'], { ...adult, grants: 'goldenScale' }),
   item('item-fire-arrows', 'lake', 'Fire Arrows', 'Shoot the rising sun with an arrow from where you land after the Water Temple', ['longshot', 'bow'], adult),
-  song('song-scarecrow', 'lake', "Scarecrow's Song", 'Make up a tune as a child, then replay it to the scarecrow as an adult', ['hookshot'], { ...adult, grants: 'scarecrow' }),
+  step('scarecrow-child', 'lake', 'Make up a song for the scarecrows', 'By the Lakeside Laboratory: talk to the scarecrows and play any 8-note tune. Write it down, you replay it later', ['ocarina', 'bombs'], child),
+  song('song-scarecrow', 'lake', "Scarecrow's Song", 'Replay your tune to the scarecrow as an adult to lock it in', ['hookshot'], { ...adult, grants: 'scarecrow', after: 'scarecrow-child' }),
 
   // Forest Temple
   gs('gs-forest-first', 'forest', 'First room: climb the vines and Hookshot it at the top', ['hookshot'], adult),

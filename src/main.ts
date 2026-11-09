@@ -291,7 +291,7 @@ function progressView(): string {
   const globals = lockoutsFor(null, state);
   const named = (kind: Kind) => ENTRIES.filter((e) => e.kind === kind && state.done.includes(e.id)).map((e) => e.name);
   const nameList = (names: string[]) => names.length ? `<ul class="names">${names.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
-  const others: [string, Kind[]][] = [['Magic Beans planted', ['plant']], ['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Mask quest', ['mask']], ['Biggoron Sword quest', ['quest']], ['Other items', ['reward', 'shield']]];
+  const others: [string, Kind[]][] = [['Magic Beans planted', ['plant']], ['Set-up steps', ['step']], ['Upgrades', ['upgrade']], ['Great Fairies', ['fairy']], ['Mask quest', ['mask']], ['Biggoron Sword quest', ['quest']], ['Other items', ['reward', 'shield']]];
   const story = ENTRIES.filter((e) => e.kind === 'story');
   const storyDone = story.filter((e) => state.done.includes(e.id));
   const storyNow = story.filter((e) => statusOf(e, state) === 'now');
