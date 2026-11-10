@@ -1,7 +1,7 @@
 import { ABILITIES, AREAS, EXTRAS, GOSSIP_TOTAL, ROADS } from './data/world';
 import { ENTRIES } from './data/entries';
 import { LOCKOUTS } from './data/lockouts';
-import type { Ability, Area, Entry, Lockout, SideTrip, State, Status, TripStop } from './types';
+import type { Ability, Age, Area, Entry, Lockout, SideTrip, State, Status, TripStop } from './types';
 
 /** Picking a route with fewer items than this isn't worth a dedicated trip. */
 export const WORTHWHILE_TRIP = 3;
@@ -13,6 +13,7 @@ export function freshState(): State {
   return {
     version: 1,
     current: 'kokiri',
+    age: 'child',
     visited: ['kokiri'],
     owned: [],
     notYet: [],
@@ -54,6 +55,29 @@ function childLocked(entry: Entry, state: State): boolean {
   return entry.age === 'child' && state.owned.includes('adult') && !state.owned.includes('forestClear');
 }
 
+/** Where the Master Sword is, so where the age changes. */
+export const AGE_SWITCH_AREA = 'temple';
+
+/** Free age switching starts once the Forest Temple is finished. */
+export function canSwitchAge(state: State): boolean {
+  return hasAll(state, ['adult', 'forestClear']);
+}
+
+/** The age being played: forced by the story until switching is free, then the player's pick. */
+export function currentAge(state: State): Age {
+  if (!state.owned.includes('adult')) return 'child';
+  if (!state.owned.includes('forestClear')) return 'adult';
+  return state.age;
+}
+
+export const otherAge = (age: Age): Age => (age === 'child' ? 'adult' : 'child');
+
+const fitsAge = (entry: Entry, age: Age) => !entry.age || entry.age === age;
+
+export function setAge(state: State, age: Age): State {
+  return { ...state, age };
+}
+
 export function tokenCount(state: State, entries: Entry[] = ENTRIES): number {
   const done = new Set(state.done);
   return entries.filter((e) => e.kind === 'skulltula' && done.has(e.id)).length + state.extraTokens;
@@ -84,8 +108,20 @@ export function entriesIn(area: string, entries: Entry[] = ENTRIES): Entry[] {
   return entries.filter((e) => e.area === area && !e.quiet);
 }
 
-export function availableIn(area: string, state: State, entries: Entry[] = ENTRIES): Entry[] {
-  return entriesIn(area, entries).filter((e) => statusOf(e, state, entries) === 'now');
+/** Things collectable here now at the age being played. */
+export function availableIn(
+  area: string,
+  state: State,
+  entries: Entry[] = ENTRIES,
+  age: Age = currentAge(state),
+): Entry[] {
+  return entriesIn(area, entries).filter((e) => fitsAge(e, age) && statusOf(e, state, entries) === 'now');
+}
+
+/** Things collectable here now, but only at the other age. */
+export function otherAgeIn(area: string, state: State, entries: Entry[] = ENTRIES): Entry[] {
+  const age = currentAge(state);
+  return entriesIn(area, entries).filter((e) => !fitsAge(e, age) && statusOf(e, state, entries) === 'now');
 }
 
 /** Questions worth asking here: they'd unblock something, and their earlier steps are confirmed. */
@@ -156,23 +192,41 @@ function shortestPath(from: string, to: string, state: State): string[] {
   return path[0] === from ? path : [];
 }
 
-/** Things collectable now in places already visited, except where the player is standing. */
-export function returnItems(state: State, entries: Entry[] = ENTRIES): Entry[] {
+/**
+ * Things collectable at the given age in places already visited. At the age being played,
+ * where the player is standing doesn't count; at the other age it does, since leaving is needed.
+ */
+export function returnItems(state: State, entries: Entry[] = ENTRIES, age: Age = currentAge(state)): Entry[] {
+  const playing = age === currentAge(state);
   return entries.filter(
     (e) =>
       !e.quiet &&
-      e.area !== state.current &&
+      !(playing && e.area === state.current) &&
       state.visited.includes(e.area) &&
+      fitsAge(e, age) &&
       statusOf(e, state, entries) === 'now',
   );
 }
 
-/** A walking route through every area with return items, always going to the nearest next. */
-export function planTrip(state: State, entries: Entry[] = ENTRIES): TripStop[] {
-  const items = returnItems(state, entries);
+/**
+ * A walking route through every area with return items for one age, always going to the
+ * nearest next. For the other age it first goes to the Temple of Time to change.
+ */
+export function planTrip(state: State, entries: Entry[] = ENTRIES, age: Age = currentAge(state)): TripStop[] {
+  const items = returnItems(state, entries, age);
   const remaining = new Set(items.map((e) => e.area));
   const stops: TripStop[] = [];
   let here = state.current;
+  if (items.length > 0 && age !== currentAge(state)) {
+    const path = shortestPath(here, AGE_SWITCH_AREA, state);
+    for (const area of path.slice(1)) stops.push({ area, entries: [] });
+    if (path.length <= 1) stops.push({ area: AGE_SWITCH_AREA, entries: [] });
+    const temple = stops[stops.length - 1];
+    temple.switchTo = age;
+    temple.entries = items.filter((e) => e.area === AGE_SWITCH_AREA).map((e) => e.id);
+    remaining.delete(AGE_SWITCH_AREA);
+    here = AGE_SWITCH_AREA;
+  }
   while (remaining.size > 0) {
     const paths = [...remaining].map((area) => shortestPath(here, area, state)).filter((p) => p.length > 0);
     if (paths.length === 0) break;
@@ -186,8 +240,8 @@ export function planTrip(state: State, entries: Entry[] = ENTRIES): TripStop[] {
   return stops;
 }
 
-export function isTripWorthwhile(state: State, entries: Entry[] = ENTRIES): boolean {
-  return returnItems(state, entries).length >= WORTHWHILE_TRIP;
+export function isTripWorthwhile(state: State, entries: Entry[] = ENTRIES, age: Age = currentAge(state)): boolean {
+  return returnItems(state, entries, age).length >= WORTHWHILE_TRIP;
 }
 
 /** The areas to walk through in order, starting at the current one, including added side trips. */
@@ -277,6 +331,7 @@ export function toggleDone(state: State, id: string, entries: Entry[] = ENTRIES)
   return {
     ...state,
     owned: nextOwned,
+    age: finishing && entry.grants === 'forestClear' ? 'adult' : state.age,
     notYet: state.notYet.filter((x) => !nextOwned.includes(x)),
     done: toggled(state.done, id),
     skipped: state.skipped.filter((x) => x !== id),
@@ -294,6 +349,8 @@ export function toggleAbility(state: State, id: string): State {
   return {
     ...state,
     owned: toggled(state.owned, id),
+    // Finishing the Forest Temple happens as an adult.
+    age: id === 'forestClear' && owning ? 'adult' : state.age,
     done,
     notYet: state.notYet.filter((x) => x !== id),
     skipped: state.skipped.filter((x) => x !== entry),
@@ -355,6 +412,7 @@ export function sanitize(raw: unknown): State {
   return {
     version: 1,
     current,
+    age: data.age === 'child' || data.age === 'adult' ? data.age : owned.includes('forestClear') ? 'adult' : 'child',
     visited: visited.includes(current) ? visited : [...visited, current],
     owned,
     notYet: pick(data.notYet, abilityIds),

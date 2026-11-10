@@ -30,6 +30,11 @@ import {
   waitingGates,
   warningsBefore,
   childLeft,
+  canSwitchAge,
+  currentAge,
+  otherAgeIn,
+  setAge,
+  AGE_SWITCH_AREA,
 } from '../src/logic';
 import type { Entry, State } from '../src/types';
 
@@ -427,6 +432,57 @@ describe('ages', () => {
   });
 });
 
+describe('playing age', () => {
+  const free = (age: 'child' | 'adult', more: Partial<State> = {}): State => ({
+    ...setAge(withOwned('dekuClear', 'adult', 'forestClear', 'boomerang'), age),
+    ...more,
+  });
+
+  it('follows the story until the Forest Temple, then the player', () => {
+    expect(currentAge(withOwned('dekuClear'))).toBe('child');
+    expect(currentAge(setAge(withOwned('adult'), 'child'))).toBe('adult');
+    expect(canSwitchAge(withOwned('adult'))).toBe(false);
+    expect(currentAge(free('child'))).toBe('child');
+    expect(currentAge(free('adult'))).toBe('adult');
+  });
+
+  it('becomes adult when the Forest Temple is confirmed either way', () => {
+    const before = setAge(withOwned('adult', 'bow'), 'child');
+    expect(currentAge(toggleAbility(before, 'forestClear'))).toBe('adult');
+    expect(currentAge(toggleDone(before, 'story-forest-medallion'))).toBe('adult');
+  });
+
+  it('only counts things for the age being played as here now', () => {
+    const asAdult = free('adult', { current: 'kakariko', visited: ['kakariko'] });
+    expect(availableIn('kakariko', asAdult).every((e) => e.age !== 'child')).toBe(true);
+    expect(otherAgeIn('kakariko', asAdult).map((e) => e.id)).toContain('gs-kak-nw');
+    expect(availableIn('kakariko', setAge(asAdult, 'child')).map((e) => e.id)).toContain('gs-kak-nw');
+  });
+
+  it('splits return trips by age', () => {
+    const state = free('adult', { current: 'field', visited: ['field', 'kakariko', 'kokiri', 'market', 'temple'] });
+    const child = returnItems(state, undefined, 'child');
+    const adult = returnItems(state, undefined, 'adult');
+    expect(child.length).toBeGreaterThan(0);
+    expect(child.every((e) => e.age !== 'adult')).toBe(true);
+    expect(adult.every((e) => e.age !== 'child')).toBe(true);
+    expect(returnItems(state)).toEqual(adult);
+  });
+
+  it('routes the other age through the Temple of Time first', () => {
+    const state = free('adult', { current: 'kakariko', visited: ['field', 'kakariko', 'kokiri', 'market', 'temple'] });
+    const trip = planTrip(state, undefined, 'child');
+    const switchAt = trip.findIndex((s) => s.switchTo === 'child');
+    expect(trip[switchAt].area).toBe(AGE_SWITCH_AREA);
+    expect(trip.slice(0, switchAt).every((s) => s.entries.length === 0)).toBe(true);
+    const route = ['kakariko', ...trip.map((s) => s.area)];
+    route.slice(1).forEach((area, i) => expect(neighbours(route[i])).toContain(area));
+    // Child things where the adult is standing still need a trip back.
+    expect(trip.flatMap((s) => s.entries)).toContain('gs-kak-nw');
+    expect(planTrip(state, undefined, 'adult').some((s) => s.switchTo)).toBe(false);
+  });
+});
+
 describe('leaving an area', () => {
   it('remembers what you skipped and records the new visit', () => {
     const state = { ...freshState(), current: 'deku', visited: ['deku'] };
@@ -566,6 +622,13 @@ describe('heading somewhere', () => {
 });
 
 describe('restoring saved data', () => {
+  it('fills in the playing age for older saves', () => {
+    expect(sanitize({ owned: ['adult', 'forestClear'] }).age).toBe('adult');
+    expect(sanitize({ owned: [] }).age).toBe('child');
+    expect(sanitize({ owned: ['adult', 'forestClear'], age: 'child' }).age).toBe('child');
+    expect(sanitize({ age: 'elder' }).age).toBe('child');
+  });
+
   it('falls back to a fresh state on junk', () => {
     expect(sanitize(null)).toEqual(freshState());
     expect(sanitize('oops')).toEqual(freshState());

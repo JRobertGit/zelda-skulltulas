@@ -4,7 +4,12 @@ import { ENTRIES } from './data/entries';
 import { bottle, kindIcon, note, quarteredHeart, spider, ui } from './icons';
 import {
   availableIn,
+  canSwitchAge,
   checksFor,
+  currentAge,
+  otherAge,
+  otherAgeIn,
+  setAge,
   childLeft,
   entriesIn,
   freshState,
@@ -35,7 +40,7 @@ import {
 } from './logic';
 import { mapSvg } from './map';
 import { downloadBackup, load, readBackup, save } from './store';
-import type { Entry, Kind, Lockout, State } from './types';
+import type { Age, Entry, Kind, Lockout, State } from './types';
 
 type Tab = 'here' | 'map' | 'trips' | 'progress';
 
@@ -49,6 +54,8 @@ let choosingDestination = false;
 let picked: string | null = null;
 let zoom = 1;
 let sheetOpen = false;
+/** Which age's return trip is shown. Null follows the age being played. */
+let tripAge: Age | null = null;
 /** Set when the map should jump to the area in focus on the next render. */
 let recenter = true;
 const MIN_ZOOM = 1;
@@ -62,6 +69,14 @@ const root = document.getElementById('app')!;
 const esc = (text: string) =>
   text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const areaName = (id: string) => AREAS.find((a) => a.id === id)?.name ?? id;
+const ageName = (age: Age) => (age === 'child' ? 'Child' : 'Adult');
+
+/** A two-way switch between child and adult. */
+function ageSwitch(label: string, action: string, value: Age, counts?: Record<Age, number>): string {
+  return `<div class="age-switch" role="group" aria-label="${esc(label)}"><span>${esc(label)}</span>
+    ${(['child', 'adult'] as Age[]).map((age) => `<button class="seg ${value === age ? 'on' : ''}" data-action="${action}" data-id="${age}" data-key="${action}-${age}" aria-pressed="${value === age}">${ageName(age)}${counts && counts[age] ? `<em>${counts[age]}</em>` : ''}</button>`).join('')}
+  </div>`;
+}
 
 function update(next: State): void {
   state = next;
@@ -109,7 +124,9 @@ function hereView(): string {
   const area = AREAS.find((a) => a.id === (viewing ?? state.current))!;
   const isHere = area.id === state.current;
   const entries = entriesIn(area.id);
-  const now = entries.filter((e) => statusOf(e, state) === 'now');
+  const now = availableIn(area.id, state);
+  const later = otherAgeIn(area.id, state);
+  const age = currentAge(state);
   const done = entries.filter((e) => statusOf(e, state) === 'done');
   const blocked = entries.filter((e) => statusOf(e, state) === 'blocked');
   const checks = checksFor(area.id, state);
@@ -122,6 +139,7 @@ function hereView(): string {
     .map((id) => ({ id, count: state.visited.includes(id) ? availableIn(id, state).length : 0 }));
 
   return `${headingBar()}
+    ${canSwitchAge(state) ? `<div class="here-age">${ageSwitch('Playing as', 'age', age)}</div>` : ''}
     <section class="panel">
       <header class="panel-head">
         <div class="where"><span>${isHere ? "You're in" : 'Looking at'}</span><h2>${esc(area.name)}</h2></div>
@@ -143,6 +161,7 @@ function hereView(): string {
       ${waiting.length ? `<div class="waiting"><span>Got it now?</span>${waiting.map((a) => `<button class="chip small" data-action="own" data-id="${a.id}" data-key="w-${a.id}">${esc(a.label)}</button>`).join('')}</div>` : ''}
       ${now.map(entryCard).join('')}
       ${now.length === 0 && areaChecks.length === 0 ? `<div class="empty">${ui.check}<p>Nothing to grab here right now.</p></div>` : ''}
+      ${later.length ? `<details class="done-list other-age"><summary>${later.length} more as ${age === 'child' ? 'an adult' : 'a child'} · change at the Temple of Time</summary>${later.map(entryCard).join('')}</details>` : ''}
       ${blocked.length ? `<p class="later">${ui.lock}More here later. You don't need to do anything yet.</p>` : ''}
       ${done.length ? `<details class="done-list"><summary>${done.length} collected here</summary>${done.map(entryCard).join('')}</details>` : ''}
     </section>
@@ -237,13 +256,19 @@ function mapView(): string {
 // Return trips tab
 
 function tripsView(): string {
-  const items = returnItems(state);
-  const trip = planTrip(state);
+  const playing = currentAge(state);
+  const switching = canSwitchAge(state);
+  const age = switching ? (tripAge ?? playing) : playing;
+  const counts = { child: returnItems(state, undefined, 'child').length, adult: returnItems(state, undefined, 'adult').length };
+  const items = returnItems(state, undefined, age);
+  const trip = planTrip(state, undefined, age);
   const route = [state.current, ...trip.map((s) => s.area)];
+  const picker = switching ? ageSwitch('Trip as', 'trip-age', age, counts) : '';
   if (items.length === 0) {
-    return mapScreen(mapSvg(state, { zoom }), `<div class="trip-sheet small"><div class="empty big">${ui.check}<h2>No return trips</h2><p>Nothing is waiting in places you've been.</p></div></div>`, 'Nothing to go back for');
+    const other = switching ? counts[otherAge(age)] : 0;
+    return mapScreen(mapSvg(state, { zoom }), `<div class="trip-sheet small">${picker}<div class="empty big">${ui.check}<h2>No return trips${switching ? ` as ${age === 'child' ? 'a child' : 'an adult'}` : ''}</h2><p>${other ? `${other} waiting as ${age === 'child' ? 'an adult' : 'a child'}.` : "Nothing is waiting in places you've been."}</p></div></div>`, 'Nothing to go back for');
   }
-  const headline = isTripWorthwhile(state)
+  const headline = isTripWorthwhile(state, undefined, age)
     ? `<span class="count hot">Worth a trip</span>`
     : `<span class="count">Can wait</span>`;
   const stops = trip.filter((s) => s.entries.length).length;
@@ -252,20 +277,23 @@ function tripsView(): string {
         <i></i><span class="panel-head"><h2>${items.length} waiting · ${stops} ${stops === 1 ? 'stop' : 'stops'}</h2>${headline}</span>
       </button>
       <div class="sheet-body">
+      ${picker}
       <ol class="route">
         ${trip.map((stop, index) => {
           const entries = stop.entries.map((id) => ENTRIES.find((e) => e.id === id)!);
-          return `<li class="${entries.length ? '' : 'pass'}">
+          return `<li class="${entries.length || stop.switchTo ? '' : 'pass'}">
             <span class="route-num">${index + 1}</span>
             <div class="route-stop"><h3>${esc(areaName(stop.area))}</h3>
-            ${entries.length === 0 ? '<p class="muted">Pass through</p>' : entries.map(entryCard).join('')}
+            ${stop.switchTo ? `<p class="age-change">${stop.switchTo === 'child' ? 'Put the Master Sword back to become a child' : 'Draw the Master Sword to become an adult'}</p>
+              <button class="btn small" data-action="age" data-id="${stop.switchTo}" data-key="trip-switch">I'm ${stop.switchTo === 'child' ? 'a child' : 'an adult'} now</button>` : ''}
+            ${entries.length === 0 ? (stop.switchTo ? '' : '<p class="muted">Pass through</p>') : entries.map(entryCard).join('')}
             </div>
           </li>`;
         }).join('')}
       </ol>
       </div>
     </section>`;
-  return mapScreen(mapSvg(state, { route, dimOffRoute: true, zoom }), sheet, 'Gold line: your return route');
+  return mapScreen(mapSvg(state, { route, dimOffRoute: true, zoom }), sheet, age === playing ? 'Gold line: your return route' : `Gold line: via the Temple of Time as ${age === 'child' ? 'a child' : 'an adult'}`);
 }
 
 // Progress tab
@@ -398,7 +426,9 @@ function leaveSheet(): string {
 
 function render(): void {
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key;
-  const trips = returnItems(state).length;
+  const trips = canSwitchAge(state)
+    ? returnItems(state, undefined, 'child').length + returnItems(state, undefined, 'adult').length
+    : returnItems(state).length;
   const views = { here: hereView, map: mapView, trips: tripsView, progress: progressView };
   const scroller = root.querySelector<HTMLElement>('.map-scroll');
   const kept = scroller ? [scroller.scrollLeft, scroller.scrollTop] : null;
@@ -551,6 +581,19 @@ function handle(action: string, id: string | undefined): void {
     case 'destination':
       choosingDestination = false;
       update(setDestination(state, id ?? null));
+      break;
+    case 'age':
+      if (id === 'child' || id === 'adult') {
+        tripAge = null;
+        update(setAge(state, id));
+      }
+      break;
+    case 'trip-age':
+      if (id === 'child' || id === 'adult') {
+        tripAge = id;
+        recenter = true;
+        render();
+      }
       break;
     case 'detour':
       if (id) update(toggleDetour(state, id));

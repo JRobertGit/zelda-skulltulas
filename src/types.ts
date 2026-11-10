@@ -66,6 +66,8 @@ export interface Lockout {
 export interface State {
   version: 1;
   current: string;
+  /** The age being played. Only a choice once the Master Sword can be returned. */
+  age: Age;
   visited: string[];
   owned: string[];
   /** Checks the player answered "not yet", so they stop being asked. */
@@ -104,4 +106,6 @@ export interface TripStop {
   area: string;
   /** Entries to collect at this stop. Empty for areas the route only passes through. */
   entries: string[];
+  /** Set on the Temple of Time stop where the plan changes age. */
+  switchTo?: Age;
 }

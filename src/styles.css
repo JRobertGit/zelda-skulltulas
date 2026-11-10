@@ -286,3 +286,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
 }
+
+/* Age switch */
+.age-switch { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
+.age-switch > span { flex: 1; color: var(--muted); font-size: 14px; font-weight: 700; }
+.trip-sheet .age-switch { margin: 4px 14px 10px; }
+.seg { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 16px; border: 1px solid #ffffff26; border-radius: 99px; background: #ffffff0d; color: inherit; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.seg.on { background: var(--gold); border-color: var(--gold); color: #1b1a12; }
+.seg em { min-width: 20px; padding: 0 6px; border-radius: 99px; background: #ffffff26; font-size: 12px; font-style: normal; line-height: 20px; text-align: center; }
+.seg.on em { background: #1b1a1233; }
+.age-change { margin: 2px 0 8px; color: var(--gold); font-size: 14px; font-weight: 700; }
+.btn.small { min-height: 40px; padding: 6px 14px; font-size: 14px; margin-bottom: 8px; }
+.here-age { padding: 10px 14px 24px; }
+.here-age .age-switch { margin: 0; }
