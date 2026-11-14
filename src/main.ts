@@ -64,6 +64,8 @@ let confirmingReset = false;
 let openDetail: string | null = null;
 let saveFailed = false;
 let notice = '';
+/** True once this phone has a saved copy of the app for use without a signal. */
+let offlineReady = false;
 
 const root = document.getElementById('app')!;
 const esc = (text: string) =>
@@ -391,6 +393,7 @@ function progressView(): string {
       ${owned.length ? `<p class="muted">What you've told me you have. Tap to undo a mistake.</p>
       <div class="owned">${owned.map((a) => `<button class="chip on" data-action="own" data-id="${a.id}" data-key="u-${a.id}" aria-pressed="true">${ui.check}${esc(a.label)}</button>`).join('')}</div>` : ''}
       ${flagged ? `<p class="muted">${flagged} marked wrong. Their IDs are in your backup file.</p>` : ''}
+      <p class="offline ${offlineReady ? 'good' : 'muted'}">${offlineReady ? `${ui.check}Saved on this phone. Works with no signal.` : 'Not saved for offline use yet. Open the app once with internet.'}</p>
       <div class="save-row">
         <button class="btn" data-action="backup" data-key="backup">${ui.download}Back up</button>
         <label class="btn">${ui.upload}Restore<input type="file" accept="application/json,.json" data-action="restore" hidden/></label>
@@ -699,3 +702,15 @@ document.fonts?.ready.then(() => {
   if (tab === 'map' || tab === 'trips') render();
 });
 window.addEventListener('pageshow', () => render());
+
+// Keep a copy of the app on the phone so it opens with no signal.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('./sw.js')
+    .then(() => navigator.serviceWorker.ready)
+    .then(() => {
+      offlineReady = true;
+      if (tab === 'progress') render();
+    })
+    .catch(() => {});
+}
